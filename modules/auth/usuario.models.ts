@@ -1,3 +1,5 @@
+// MODEL: schema de Usuario en MongoDB (coleccion usuarios). Password SIEMPRE hasheada (bcrypt en controller).
+// Se conecta con: ./types/usuario.interface, ./enum/rol.enum. Lo usa auth.controller.ts (login/registro).
 import { Schema, model, Document } from 'mongoose';
 import type { IUsuario } from './types/usuario.interface';
 import { Rol } from './enum/rol.enum';

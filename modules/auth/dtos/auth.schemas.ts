@@ -1,3 +1,5 @@
+// DTOS: validacion zod de login (email+password) y registro (user min 3, password min 6, rol opcional).
+// Se conecta con: ../../middlewares/validarDatos.middleware via auth.routes.ts (validarSchema).
 import { z } from 'zod';
 import { Rol } from '../enum/rol.enum';
 

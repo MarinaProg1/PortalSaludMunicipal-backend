@@ -1,3 +1,5 @@
+// DTOS: validacion zod de crear y editar obra social (el PUT es partial: manda solo lo que cambia).
+// Se conecta con: ../../middlewares/validarDatos.middleware via obrasocial.routes.ts (validarSchema).
 import { z } from 'zod';
 
 export const crearObraSocialSchema = z.object({

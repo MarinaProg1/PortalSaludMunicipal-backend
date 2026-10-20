@@ -1,3 +1,7 @@
+// CONTROLLER DE AUTH
+// Hace: login (busca usuario activo, compara bcrypt, firma JWT 9h) y registro (hashea y crea).
+// Se conecta con: ./usuario.models, ../../utils/respuestaEstandar, bcrypt, jsonwebtoken.
+// Excepcion: el login NO usa respuestaEstandar, devuelve { ok, token } (lo espera el frontend).
 import type { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';

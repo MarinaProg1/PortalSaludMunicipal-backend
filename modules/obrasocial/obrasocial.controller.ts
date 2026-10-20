@@ -16,13 +16,14 @@ export const listar = async (req: Request, res: Response, next: NextFunction) =>
                 return respuestaEstandar(res, 200, true, 'Listado de obras sociales', obras);
     } catch (error) {
         next(error);
-    };
+    }
+};
 
 // GET /api/v1/obrasociales/:id -> una por id. 400 si el id no es de 24 caracteres, 404 si no existe.
 export const obtenerUno = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+        if (typeof id !== 'string' || !/^[0-9a-fA-F]{24}$/.test(id)) {
             return respuestaEstandar(res, 400, false, 'id no valido');
         }
         const obra = await ObraSocial.findById(id);
@@ -60,7 +61,7 @@ export const crear = async (req: Request, res: Response, next: NextFunction) => 
 export const actualizar = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+        if (typeof id !== 'string' || !/^[0-9a-fA-F]{24}$/.test(id)) {
             return respuestaEstandar(res, 400, false, 'id no valido');
         }
         const obra = await ObraSocial.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
@@ -81,7 +82,7 @@ export const actualizar = async (req: Request, res: Response, next: NextFunction
 export const eliminar = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+        if (typeof id !== 'string' || !/^[0-9a-fA-F]{24}$/.test(id)) {
             return respuestaEstandar(res, 400, false, 'id no valido');
         }
         const obra = await ObraSocial.findByIdAndUpdate(id, { activo: false }, { new: true });

@@ -1,3 +1,6 @@
+// MODEL: schema de ObraSocial en MongoDB (coleccion obrasSociales).
+// Se conecta con: ./types/obrasocial.interface. Lo usa obrasocial.controller.ts (CRUD).
+// OJO: el nombre del model 'ObraSocial' es el que usa Paciente en su ref.
 import { Document, Schema, model } from 'mongoose';
 import type { IObraSocial } from './types/obrasocial.interface';
 
