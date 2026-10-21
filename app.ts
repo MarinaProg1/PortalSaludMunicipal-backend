@@ -10,6 +10,9 @@ import { connectDB } from './config/database';
 import auditMiddleware from './middlewares/auditoria.middleware';
 import errorHandlerMiddleware from './middlewares/errorHandler.middleware';
 
+import turnoRoutes from './modules/turno/turno.routes';
+
+
 
 
 
@@ -21,7 +24,7 @@ app.use(express.json());
 app.use(auditMiddleware);
 app.use(cors());
 
-
+app.use('/api/v1/turnos', turnoRoutes);
 
 
 app.use(errorHandlerMiddleware);
