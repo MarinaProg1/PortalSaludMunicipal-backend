@@ -10,7 +10,7 @@ export interface IPaciente extends Document{
     apellido: string,
     dni:string,
     sexo: string,
-    email: string
+    email: string,
     direccion: IDireccion,
     telefono:ITelefono,
     obraSocial:IObraSocial,

@@ -25,11 +25,8 @@ app.use(express.json());
 app.use(auditMiddleware);
 app.use(cors());
 
-<<<<<<< HEAD
 app.use('/api/v1/turnos', turnoRoutes);
-=======
 app.use('/api/v1/pacientes', pacienteRoutes);
->>>>>>> feature/pacinete
 
 
 app.use(errorHandlerMiddleware);
