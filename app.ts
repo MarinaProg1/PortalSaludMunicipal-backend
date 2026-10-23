@@ -10,6 +10,8 @@ import { connectDB } from './config/database';
 import auditMiddleware from './middlewares/auditoria.middleware';
 import errorHandlerMiddleware from './middlewares/errorHandler.middleware';
 
+import pacienteRoutes from './modules/paciente/paciente.routes';
+
 
 
 
@@ -21,7 +23,7 @@ app.use(express.json());
 app.use(auditMiddleware);
 app.use(cors());
 
-
+app.use('/api/v1/pacientes', pacienteRoutes);
 
 
 app.use(errorHandlerMiddleware);
