@@ -65,21 +65,47 @@
 
 ## Módulo 6: Gestión Horarios de Atención (Solo ADMIN - MEDICO)
 
-- **RF-6.1** - Creación de Horarios de Atencion: Un Administrador o un medico debe poder definir la disponibilidad de un médico indicando: El medico (ObjectId de un medico existente), diaSemana, haraInicio, horaFIn, duracionTurnoMinutos (por defecto 30 minutos). El cual se debe validar con el middleware de HorarioAtencionSchema
+- **RF-6.1** Creación y Actualización de Horarios de Atención:
+  El sistema debe permitir a los usuarios con rol de Administrador o Médico definir o modificar la disponibilidad horaria de un profesional. Los campos obligatorios requeridos son:
+  medico: Identificador único (ObjectId) de un médico existente en el sistema.
+  diaSemana: Día de la semana correspondiente (ej: Lunes, Martes, etc.).
+  horaInicio y horaFin: Rango horario en el que el médico atenderá.
+  duracionTurnoMinutos: Duración estimada de cada turno (con un valor predeterminado de 30 minutos).
+
+- **RF-6.2** Validaciones y Reglas de Negocio del Horario:
+  El sistema debe validar automáticamente la disponibilidad antes de registrar o actualizar un horario mediante las siguientes reglas:
+  Validación de Esquema y Formato: Los datos de entrada deben validarse obligatoriamente mediante el esquema Zod correspondiente (HorarioAtencionSchema).
+
+Coherencia temporal: La hora de fin (horaFin) debe ser estrictamente posterior a la hora de inicio (horaInicio).
+
+Múltiplo de duración: El rango horario total debe ser un múltiplo exacto de la duración configurada para cada turno.
+
+Control de Solapamientos: El sistema no debe permitir registrar solapamientos de horarios activos para un mismo médico en el mismo día de la semana.
 
 ## Módulo 7: Gestión de Turnos (El Core)
 
-- **RF-7.1** - Ciclo de Vida del Turno (Máquina de Estados): Un turno solo puede transitar por los siguientes estados: PENDIENTE, ATENDIDO, CANCELADO, AUSENTE. Todo turno nace como PENDIENTE.
+-**RF-7.1** Ciclo de Vida del Turno (Máquina de Estados):
+El sistema debe gestionar el ciclo de vida de un turno mediante una máquina de estados estricta. Todo turno creado nace obligatoriamente con el estado PENDIENTE y solo puede transitar hacia los siguientes estados permitidos:
+ATENDIDO: Cuando el paciente concurre a la consulta y es atendido por el profesional.
+CANCELADO: Cuando el turno es anulado por el paciente o la administración.
+AUSENTE: Cuando el paciente no se presenta a la cita.
 
-- **RF-7.2** - Prevención de Concurrencia (Doble Reserva): Si dos ciudadanos intentan reservar el mismo turno (mismo médico, fecha y hora) exactamente al mismo tiempo, la base de datos (mediante Transacciones de Mongoose) debe otorgarlo al primero y rechazar al segundo con un error claro.
+-**RF-7.2** Solicitud y Validación de Turnos:
+El sistema debe permitir la creación de un nuevo turno validando de forma rigurosa las reglas de negocio y disponibilidad médica:
 
-- **RF-7.3** - Límite de Ventana de Tiempo: El sistema no permitirá agendar turnos en el pasado, ni tampoco visualizar turnos con más de 30 días de anticipación (para evitar que la gente acapare turnos a futuro).
+Datos requeridos: El sistema debe registrar la relación con el médico, la especialidad solicitada, la fecha y la hora exacta del turno.
 
-- **RF-7.4** - Límite de Abuso (Anti-Spam): Un mismo Paciente (DNI) no puede tener más de DOS (2) turnos en estado PENDIENTE para la misma Especialidad al mismo tiempo.
+Validación de Especialidad: El sistema debe verificar que el médico seleccionado atienda efectivamente la especialidad indicada.
 
-- **RF-7.5** - Cancelación por el Ciudadano: El paciente puede cancelar su propio turno desde el portal móvil, siempre y cuando falten al menos 2 horas para el inicio del mismo. Pasado ese tiempo, la acción de cancelar se deshabilita en su interfaz.
+Validación de Disponibilidad Horaria: El sistema debe comprobar que el médico posea un horario de atención activo (HorarioAtencion) configurado para ese día específico de la semana.
 
-- **RF-7.6** - Gestión de Turnos en Recepción: La recepcionista debe poder visualizar todos los turnos del día en curso, ordenados cronológicamente, y tener botones rápidos para cambiar el estado de un turno a ATENDIDO o AUSENTE cuando el ciudadano llega a la salita.
+Coincidencia de Intervalos: La hora solicitada debe encontrarse estrictamente dentro del rango de inicio y fin del bloque horario del médico, y coincidir exactamente con el intervalo de duración preestablecido (ej. múltiplos de la duración del turno).
+
+-**RF-7.3** Consulta y Listado de Turnos:
+El sistema debe permitir listar y consultar los turnos registrados, ofreciendo opciones de filtrado (por ejemplo, según el médico asignado, fecha o estado del turno).
+
+-**RF-7.4** Actualización de Estados del Turno:
+El sistema debe proveer endpoints específicos para la gestión operativa de los turnos, permitiendo marcar un turno como atendido (PATCH) o proceder a su cancelación/baja según corresponda.
 
 ## Módulo 8: Interfaz de Usuario (Portal Ciudadano - Mobile First)
 
