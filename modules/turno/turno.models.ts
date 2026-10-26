@@ -1,6 +1,6 @@
 import { Schema, model, Document } from 'mongoose';
 import type { ITurno } from './types/turno.interface';
-import { EstadoTurno } from './estadoTurno.emun';
+import { EstadoTurno } from './emun/estadoTurno.emun';
 // tenemos que ver que por pacientes y especialidad solo se pueda crear un turno diario.
 
 const TurnoSchema = new Schema<ITurno>(
