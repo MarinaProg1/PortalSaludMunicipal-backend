@@ -78,6 +78,6 @@ export const verificarTurnoValido = async (
 
     return next();
   } catch (error: any) {
-    return respuestaEstandar(res,500,false,'Error al verificar disponibilidad del turno',error.messag);
+    return respuestaEstandar(res,500,false,'Error al verificar disponibilidad del turno',error.message);
   }
 };

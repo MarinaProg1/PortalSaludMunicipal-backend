@@ -57,6 +57,6 @@ export const verificarHorarioDisponible = async (
 
     return next();
   } catch (error: any) {
-    return respuestaEstandar( res, 500, false, 'Error interno al verificar la disponibilidad del horario', error.messag );
+    return respuestaEstandar( res, 500, false, 'Error interno al verificar la disponibilidad del horario', error.message );
   }
 };

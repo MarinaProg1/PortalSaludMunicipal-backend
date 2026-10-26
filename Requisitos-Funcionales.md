@@ -30,7 +30,7 @@
 
 - **RF-3.3** - Protección de Rutas: El Backend debe rechazar (HTTP 401/403) cualquier intento de acceso a endpoints protegidos si el usuario no presenta un token válido o no posee el rol (ADMIN).
 
-## Módulo 4: Gestión Personal Médico (Solo ADMIN)
+## Módulo 4: Gestión Personal Médico (ADMIN-MEDICO(parcial))
 
 - **RF-4.1** - Catálogo de Medico: El sistema debe permitir crear, listar, modificar y dar de baja (borrado lógico) médicos.
 
@@ -41,9 +41,11 @@
 -No se permitirá registrar dos Medicos con el mismo numero de matricula
 -No se permitirá registrar dos Medicos con del mismo DNI
 
-- **RF-4.4** - Borrado Lógico: No se podrán eliminar médicos físicamente de la base de datos para preservar el historial. Se utilizará un estado activo: booleano. Si se inactiva, no aparecerá en la grilla de nuevos turnos.
+- **RF-4.4** - Modificación de Médicos: El sistema debe permitir modificar los datos de médicos. Los usuarios con rol de ADMIN, podran modificar cualquiera de los campos. Los usuarios con rol de MEDICO solo podran modificar email, direccion y telefono
 
-- **RF-4.5** - Protección de Rutas: El Backend debe rechazar (HTTP 401/403) cualquier intento de acceso a endpoints protegidos si el usuario no presenta un token válido o no posee el rol (ADMIN).
+- **RF-4.5** - Borrado Lógico: No se podrán eliminar médicos físicamente de la base de datos para preservar el historial. Se utilizará un estado activo: booleano. Si se inactiva, no aparecerá en la grilla de nuevos turnos.
+
+- **RF-4.6** - Protección de Rutas: El Backend debe rechazar (HTTP 401/403) cualquier intento de acceso a endpoints protegidos si el usuario no presenta un token válido o no posee el rol (ADMIN).
 
 ## Módulo 5: Gestión Personal Pacientes (Solo ADMIN - RECEPCIONISTA)
 
@@ -55,17 +57,15 @@
 
 -No se permitirá registrar dos Pacientes con del mismo DNI
 
+- **RF-5.2** - Modificación de pacientes: El sistema debe permitir modificar pacientes. Los usuarios con rol ADMIN o RECEPCIONISTA podran modificar todos los datos. El usuario con ron de PACIENTE solo podra modificar, email, direccion, telefono.
+
 - **RF-5.4** - Borrado Lógico: No se podrán eliminar médicos físicamente de la base de datos para preservar el historial. Se utilizará un estado activo: booleano. Si se inactiva, no aparecerá en la grilla de nuevos turnos.
 
-## Módulo 6: Motor de Agendas Médicas (El Patrón de Disponibilidad)
+- **RF-5.5** - Protección de Rutas: El Backend debe rechazar (HTTP 401/403) cualquier intento de acceso a endpoints protegidos si el usuario no presenta un token válido o no posee el rol (ADMIN).
 
-- **RF-6.1** - Creación de Agendas: Un Administrador debe poder definir la disponibilidad de un médico indicando: Día de la semana (Lunes a Domingo), Hora de Inicio, Hora de Fin y Duración del Turno (en minutos, ej. 20 o 30 min).
+## Módulo 6: Gestión Horarios de Atención (Solo ADMIN - MEDICO)
 
-- **RF-6.2** - Validación de Coherencia de Agenda: El sistema debe impedir crear una agenda donde la "Hora de Inicio" sea posterior a la "Hora de Fin", o donde la duración del turno sea mayor al bloque total disponible.
-
-- **RF-6.3** - Solapamiento de Agendas Base: El sistema debe evitar que a un mismo médico se le asignen dos agendas que se superpongan en el mismo día y horario.
-
-- **RF-6.4** - Cálculo Dinámico de Disponibilidad: Cuando un ciudadano consulte turnos, el Backend calculará los "bloques de tiempo" basándose en la agenda, buscará los turnos ya otorgados en la fecha solicitada, y restará los ocupados, devolviendo al Frontend solo el listado de horarios libres.
+- **RF-6.1** - Creación de Horarios de Atencion: Un Administrador o un medico debe poder definir la disponibilidad de un médico indicando: El medico (ObjectId de un medico existente), diaSemana, haraInicio, horaFIn, duracionTurnoMinutos (por defecto 30 minutos). El cual se debe validar con el middleware de HorarioAtencionSchema
 
 ## Módulo 7: Gestión de Turnos (El Core)
 
