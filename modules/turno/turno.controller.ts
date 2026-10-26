@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { EstadoTurno } from './emun/estadoTurno.emun';
+import { EstadoTurno } from './enum/estadoTurno.enum';
 import { Turno } from './turno.models';
 import type { ICreateTurnoDTO, IQueryUrgencia } from './dtos/turno.schema';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';

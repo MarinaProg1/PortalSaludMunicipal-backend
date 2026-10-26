@@ -1,8 +1,8 @@
 import {Document, Types} from 'mongoose';
 import type {IMedico} from '../../medico/types/medico.interface';
-import type {IPaciente} from '../../pacientes/types/paciente.interface';
+import type {IPaciente} from '../../paciente/types/paciente.interface';
 import type {IEspecialidad} from '../../especialidad/types/especialidad.interface';
-import { EstadoTurno } from '../emun/estadoTurno.emun';
+import { EstadoTurno } from '../enum/estadoTurno.enum';
 
 export interface ITurno extends Document {
   id?: Types.ObjectId,
