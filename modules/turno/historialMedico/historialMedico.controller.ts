@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
 import HistorialMedico from './historialMedico.models';
-import { respuestaEstandar } from '../../utils/respuestaEstandar';
+import { respuestaEstandar } from '../../../utils/respuestaEstandar';
 
-// GET con populate y filtro por paciente
+
 const getHistorialMedico = async (req: Request, res: Response) => {
   try {
     const { paciente } = req.query;
@@ -19,7 +19,7 @@ const getHistorialMedico = async (req: Request, res: Response) => {
   }
 };
 
-// GET uno solo por ID de paciente - super útil
+
 const getHistorialByPaciente = async (req: Request<{ pacienteId: string }>, res: Response) => {
   try {
     const historial = await HistorialMedico.findOne({ paciente: req.params.pacienteId, activo: true })
@@ -35,7 +35,6 @@ const getHistorialByPaciente = async (req: Request<{ pacienteId: string }>, res:
 
 const createHistorialMedico = async (req: Request, res: Response) => {
   try {
-    // Validar que no exista ya uno para ese paciente
     const existe = await HistorialMedico.findOne({ paciente: req.body.paciente });
     if (existe) {
       return respuestaEstandar(res, 409, false, 'El paciente ya posee un historial médico. Use PUT para actualizarlo');
@@ -62,7 +61,7 @@ const updateHistorialMedico = async (req: Request<{ id: string }>, res: Response
   }
 };
 
-// Borrado lógico, no físico
+
 const deleteHistorialMedico = async (req: Request<{ id: string }>, res: Response) => {
   try {
     const borrado = await HistorialMedico.findByIdAndUpdate(req.params.id, { activo: false }, { new: true });

@@ -1,12 +1,12 @@
 import { Schema, model } from 'mongoose';
 import type { IHistorialMedico } from './types/historialMedico.interface';
 
-const historialMedicoSchema = new Schema<IHistorialMedico>({
+const historialMedicoSchema = new Schema({
   paciente: {
     type: Schema.Types.ObjectId,
     ref: 'Paciente',
     required: [true, 'El paciente es obligatorio'],
-    unique: true, // CLAVE: no puede tener 2 historiales el mismo paciente
+    unique: true,
   },
   grupoSanguineo: {
     type: String,
@@ -35,7 +35,7 @@ historialMedicoSchema.set('toJSON', {
     ret.id = ret._id;
     delete ret._id;
     delete ret.__v;
-  }
+}
 });
 
 const HistorialMedicoModel = model<IHistorialMedico>('HistorialMedico', historialMedicoSchema);

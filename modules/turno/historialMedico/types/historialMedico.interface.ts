@@ -1,8 +1,8 @@
-import { Document } from "mongoose";
-import type { IPaciente } from "../../pacientes/types/paciente.interface";
+import { Document, Types } from "mongoose";
+
 
 export interface IHistorialMedico extends Document {
-  paciente: IPaciente | string;
+  paciente: Types.ObjectId | string;
   grupoSanguineo: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
   alergias: string[];
   enfermedadesCronicas: string[];
@@ -15,6 +15,6 @@ export interface IHistorialMedico extends Document {
     drogas: boolean;
   };
   observacionesGenerales: string;
-  ultimaActualizacionPor: string; // id del medico que lo edito
+  ultimaActualizacionPor: string; 
   activo: boolean;
 }

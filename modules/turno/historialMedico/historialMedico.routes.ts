@@ -4,7 +4,7 @@ import { getHistorialMedico, getHistorialByPaciente, createHistorialMedico, upda
 const router = Router();
 
 router.get('/', getHistorialMedico);
-router.get('/paciente/:pacienteId', getHistorialByPaciente); // nueva ruta diferenciadora
+router.get('/paciente/:pacienteId', getHistorialByPaciente);  
 router.post('/', createHistorialMedico);
 router.put('/:id', updateHistorialMedico);
 router.delete('/:id', deleteHistorialMedico);
