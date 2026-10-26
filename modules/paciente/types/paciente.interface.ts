@@ -1,7 +1,7 @@
 import { Document, Types } from "mongoose";
 import type {IDireccion} from "../../../utils/direccion.interfaces";
 import type {ITelefono } from "../../../utils/telefono.interfaces";
-import type {IObraSocial} from '../../obraSocial/types/obraSocial.interface';
+import type {IObraSocial} from '../../obrasocial/types/obrasocial.interface';
 
 
 export interface IPaciente extends Document{

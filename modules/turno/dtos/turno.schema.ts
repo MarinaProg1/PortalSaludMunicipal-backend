@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EstadoTurno } from '../emun/estadoTurno.emun';
+import { EstadoTurno } from '../enum/estadoTurno.enum';
 
 const regexHora = /^([01]\d|2[0-3]):[0-5]\d$/;
 const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
