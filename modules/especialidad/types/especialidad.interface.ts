@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Document } from "mongoose";
 
 export interface IEspecialidad extends Document {
@@ -8,14 +7,3 @@ export interface IEspecialidad extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
-=======
-import { Document } from 'mongoose';
-
-export interface IEspecialidad extends Document {
-    nombre: string;
-    descripcion: string;
-    activo: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-}
->>>>>>> feature/especialidad
