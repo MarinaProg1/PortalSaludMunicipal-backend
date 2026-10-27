@@ -20,6 +20,7 @@ import turnoRoutes from './modules/turno/turno.routes';
 import pacienteRoutes from './modules/paciente/paciente.routes';
 import medicoRoutes from './modules/medico/medico.routes';
 import especialidadRoutes from './modules/especialidad/especialidad.routes';
+import historialMedicoRoutes from './modules/historialMedico/historialMedico.routes';
 
 
 const app: Application = express();
@@ -40,7 +41,7 @@ app.use('/api/v1/turnos', turnoRoutes);
 app.use('/api/v1/pacientes', pacienteRoutes);
 app.use('/api/v1/medicos', medicoRoutes);
 app.use('/api/v1/especialidades', especialidadRoutes);
-
+app.use('/api/v1/historiales', historialMedicoRoutes);
 
 app.use(errorHandlerMiddleware);
 
