@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import Medico from './medico.models';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
-import type { IMedicoDTO } from './dtos/medico.schema';
+import type { IMedicoDTO, IMedicoUpdateDTO } from './dtos/medico.schema';
 
 const getMedico = async (req: Request, res: Response) => {
   try {
@@ -41,6 +41,16 @@ const createMedico = async (req: Request<unknown, unknown, IMedicoDTO>, res: Res
 };
 
 
+const updateMedico = async (req: Request<{ id: string }, unknown, IMedicoUpdateDTO>, res: Response) => {
+  try {
+    const actualizado = await Medico.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!actualizado) return respuestaEstandar(res, 404, false, 'Médico no encontrado');
+    return respuestaEstandar(res, 200, true, 'Médico actualizado correctamente', actualizado);
+  } catch (error: any) {
+    return respuestaEstandar(res, 400, false, 'Error al actualizar', error.message);
+  }
+};
+
 const deleteMedico = async (req: Request<{ id: string }>, res: Response) => {
   try {
     const borrado = await Medico.findByIdAndUpdate(req.params.id, { activo: false }, { new: true });
@@ -51,4 +61,4 @@ const deleteMedico = async (req: Request<{ id: string }>, res: Response) => {
   }
 };
 
-export { getMedico, createMedico, deleteMedico };
+export { getMedico, createMedico, updateMedico, deleteMedico };

@@ -8,11 +8,11 @@ const medicoSchema = new Schema<IMedico>({
     apellido: { type: String, required: [true, 'El apellido es obligatorio'], uppercase: true, trim: true },
     dni: { type: String, required: true, unique: true, match: [/^[0-9]{7,8}$/, 'DNI inválido'] },
     email: { type: String, required: true, unique: true, lowercase: true },
-    especialidades: [{ type: Schema.Types.ObjectId, ref: 'especialidad', required: true }],
+    especialidades: [{ type: Schema.Types.ObjectId, ref: 'Especialidad', required: true }],
     numeroMatricula: { type: Number, required: true, unique: true, index: true },
     direccion: { type: DireccionSchema, required: true },
     telefono: { type: TelefonoSchema, required: true },
-    obraSocial: { type: Schema.Types.ObjectId, ref: 'obraSocial', default: null },
+    obraSocial: { type: Schema.Types.ObjectId, ref: 'ObraSocial', default: null },
     activo: { type: Boolean, default: true }
 }, { 
     timestamps: true,
@@ -26,7 +26,6 @@ medicoSchema.virtual('nombreCompleto').get(function() {
 });
 
 medicoSchema.index({ apellido: 1, nombre: 1 });
-medicoSchema.index({ numeroMatricula: 1 });
 
 const MedicoModel = model<IMedico>('Medico', medicoSchema);
 export default MedicoModel;
