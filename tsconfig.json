@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "types": ["node"],
+    "rootDir": ".",
+    "allowJs": true,
+    "outDir": "./dist",
+    "module": "esnext",
+    "esModuleInterop": true,
+    "target": "ES2022",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "strict": true,
+    "verbatimModuleSyntax": false,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  },
+  "include": [
+    "app.ts",
+    "config/**/*.ts",
+    "middlewares/**/*.ts",
+    "modules/**/*.ts",
+    "utils/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts"
+  ]
+}

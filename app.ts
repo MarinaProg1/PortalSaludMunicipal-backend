@@ -10,10 +10,14 @@ import { connectDB } from './config/database';
 import auditMiddleware from './middlewares/auditoria.middleware';
 import errorHandlerMiddleware from './middlewares/errorHandler.middleware';
 
+// --- Modulos (tomas)) ---
+import authRoutes from './modules/auth/auth.routes';                          // login y registro
+import obraSocialRoutes from './modules/obrasocial/obrasocial.routes';        // CRUD obras sociales
+import consultaMedicaRoutes from './modules/consultamedica/consultamedica.routes'; // CRUD consultas
+
+// --- Modulos (compañera) ---
 import turnoRoutes from './modules/turno/turno.routes';
-
-
-
+import pacienteRoutes from './modules/paciente/paciente.routes';
 
 
 const app: Application = express();
@@ -24,7 +28,14 @@ app.use(express.json());
 app.use(auditMiddleware);
 app.use(cors());
 
+// --- Rutas(tomas) ---
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/obrasociales', obraSocialRoutes);
+app.use('/api/v1/consultasmedicas', consultaMedicaRoutes);
+
+// --- Rutas(compañera) ---
 app.use('/api/v1/turnos', turnoRoutes);
+app.use('/api/v1/pacientes', pacienteRoutes);
 
 
 app.use(errorHandlerMiddleware);
