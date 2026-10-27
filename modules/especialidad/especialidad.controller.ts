@@ -9,12 +9,20 @@ export const getEspecialidades = async (req: Request, res: Response) => {
     const filtros: any = {};
 
     if (nombre) {
+<<<<<<< HEAD
       filtros.nombre = { $regex: nombre, $options: 'i' }; // busca sin importar mayúsculas
+=======
+      filtros.nombre = { $regex: nombre, $options: 'i' }; 
+>>>>>>> feature/especialidad
     }
     if (activo !== undefined) {
       filtros.activo = activo === 'true';
     } else {
+<<<<<<< HEAD
       filtros.activo = true; // por defecto solo activas
+=======
+      filtros.activo = true; 
+>>>>>>> feature/especialidad
     }
 
     const lista = await Especialidad.find(filtros).sort({ nombre: 1 });
@@ -58,7 +66,10 @@ export const updateEspecialidad = async (req: Request, res: Response) => {
 
 export const deleteEspecialidad = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
     // Borrado lógico, no físico
+=======
+>>>>>>> feature/especialidad
     const borrada = await Especialidad.findByIdAndUpdate(req.params.id, { activo: false }, { new: true });
     if (!borrada) return respuestaEstandar(res, 404, false, 'No encontrada');
     return respuestaEstandar(res, 200, true, 'Especialidad desactivada', borrada);
