@@ -18,6 +18,7 @@ import consultaMedicaRoutes from './modules/consultamedica/consultamedica.routes
 // --- Modulos (compañera) ---
 import turnoRoutes from './modules/turno/turno.routes';
 import pacienteRoutes from './modules/paciente/paciente.routes';
+import medicoRoutes from './modules/medico/medico.routes';
 import especialidadRoutes from './modules/especialidad/especialidad.routes';
 import historialMedicoRoutes from './modules/historialMedico/historialMedico.routes';
 
@@ -38,6 +39,7 @@ app.use('/api/v1/consultasmedicas', consultaMedicaRoutes);
 // --- Rutas(compañera) ---
 app.use('/api/v1/turnos', turnoRoutes);
 app.use('/api/v1/pacientes', pacienteRoutes);
+app.use('/api/v1/medicos', medicoRoutes);
 app.use('/api/v1/especialidades', especialidadRoutes);
 app.use('/api/v1/historiales', historialMedicoRoutes);
 
