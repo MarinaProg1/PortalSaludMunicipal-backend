@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import HistorialMedico from './historialMedico.models';
-import { respuestaEstandar } from '../../../utils/respuestaEstandar';
+import { respuestaEstandar } from '../../utils/respuestaEstandar';
 
 
 const getHistorialMedico = async (req: Request, res: Response) => {
