@@ -9,6 +9,8 @@ import type { Request, Response, NextFunction } from 'express';
 import { ConsultaMedica } from './consultamedica.models';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
 
+// transaccion con historial medico- cuando se carga una consulta si se modifica historial.( implementar . hacer controller aparte que consuma eso)
+
 // GET /api/v1/consultasmedicas -> lista todas (con paciente y turno poblados)
 export const listar = async (req: Request, res: Response, next: NextFunction) => {
     try {

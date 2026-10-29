@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import Medico from '../modules/medico/medico.models';
 import { HorarioAtencion } from '../modules/horarioAtencion/horarioAtencion.models';
 import { respuestaEstandar } from '../utils/respuestaEstandar';
+import { IHorarioAtencion } from '../modules/horarioAtencion/types/horarioAtencion.interfaces';
 import { DiasSemana } from '../modules/horarioAtencion/enum/diasSemana.enum';
 
 // Función auxiliar para convertir "HH:mm" a minutos totales
@@ -40,19 +41,28 @@ export const verificarTurnoValido = async (
     );
 
     if (!tieneEspecialidad) {
-      return respuestaEstandar( res, 400, false, 'El médico seleccionado no atiende la especialidad indicada' );
+      return respuestaEstandar(res, 400, false, 'El médico seleccionado no atiende la especialidad indicada');
     }
 
-    //  OBTENER DÍA DE LA SEMANA CORRECTAMENTE
+    // OBTENER DÍA DE LA SEMANA CORRECTAMENTE
     // Si 'fecha' es string tipo "YYYY-MM-DD", agregamos "T00:00:00Z" para evitar desfases de zona horaria
     const fechaObj = typeof fecha === 'string' ? new Date(`${fecha}T00:00:00Z`) : new Date(fecha);
     const diaNombre = DIAS_MAPA[fechaObj.getUTCDay()];
 
-    //  BUSCAR TODOS LOS BLOQUES DEL MÉDICO PARA ESE DÍA
-    const horariosAtencion = await HorarioAtencion.find({ medico, diaSemana: diaNombre, activo: true });
+    // Validación defensiva para asegurar que diaNombre no sea undefined (resuelve el error de TS)
+    if (!diaNombre) {
+      return respuestaEstandar(res, 400, false, 'La fecha proporcionada no es válida');
+    }
+
+    // BUSCAR TODOS LOS BLOQUES DEL MÉDICO PARA ESE DÍA
+    const horariosAtencion = (await HorarioAtencion.find({ 
+      medico, 
+      diaSemana: diaNombre, 
+      activo: true 
+    })) as unknown as IHorarioAtencion[];
 
     if (!horariosAtencion || horariosAtencion.length === 0) {
-      return respuestaEstandar( res, 400, false, `El médico no atiende los días ${diaNombre}` );
+      return respuestaEstandar(res, 400, false, `El médico no atiende los días ${diaNombre}`);
     }
 
     // VALIDAR QUE LA HORA SOLICITADA CAIGA DENTRO DE ALGÚN BLOQUE Y COINCIDA CON LA DURACIÓN
@@ -73,11 +83,11 @@ export const verificarTurnoValido = async (
     });
 
     if (!bloqueValido) {
-      return respuestaEstandar(res,400,false,`La hora ${hora} no corresponde a ningún turno disponible del médico para el día ${diaNombre}`);
+      return respuestaEstandar(res, 400, false, `La hora ${hora} no corresponde a ningún turno disponible del médico para el día ${diaNombre}`);
     }
 
     return next();
   } catch (error: any) {
-    return respuestaEstandar(res,500,false,'Error al verificar disponibilidad del turno',error.message);
+    return respuestaEstandar(res, 500, false, 'Error al verificar disponibilidad del turno', error.message);
   }
 };

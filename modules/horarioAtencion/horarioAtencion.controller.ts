@@ -52,4 +52,17 @@ const updateHorarioAtencion = async (req: Request<unknown, unknown, IHorarioAten
     }   
 
 };
-export { getHorarioAtencion, createHorarioAtencion, updateHorarioAtencion};
+const deleteHorarioAtencion = async (req: Request<{ id: string }>, res: Response) => {
+    try {
+        const horarioBorrado = await HorarioAtencion.findByIdAndDelete(req.params.id);
+
+        if (!horarioBorrado) {
+            return respuestaEstandar(res, 404, false, 'Paciente no encontrado');
+        }
+
+        return respuestaEstandar(res, 200, true, 'Paciente eliminado correctamente', horarioBorrado);
+    } catch (error: any) {
+        return respuestaEstandar(res, 400, false, 'Error al eliminar el paciente', error.message);
+    }
+};
+export { getHorarioAtencion, createHorarioAtencion, updateHorarioAtencion, deleteHorarioAtencion};

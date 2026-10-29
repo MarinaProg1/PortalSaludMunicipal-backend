@@ -11,7 +11,7 @@ const pacienteSchema = new Schema<IPaciente>({
     },
     apellido: {
         type: String,
-        required: [true, 'El nombre es obligatorio'],
+        required: [true, 'El apellido es obligatorio'],
         uppercase: true,
     },
     dni: {
@@ -39,7 +39,7 @@ const pacienteSchema = new Schema<IPaciente>({
         type: TelefonoSchema
     },
     obraSocial:{
-        type: Schema.Types.ObjectId, //si no tiene obra social que sea null , tener una opcion que sea otras.
+        type: Schema.Types.ObjectId,
         ref: 'ObraSocial', 
     },
      activo: {

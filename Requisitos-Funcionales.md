@@ -34,7 +34,28 @@
 
 - **RF-4.1** - Catálogo de Medico: El sistema debe permitir crear, listar, modificar y dar de baja (borrado lógico) médicos.
 
-- **RF-4.2** - Alta de Médicos: El sistema debe permitir registrar médicos. Los datos obligatorios son nombre, apellido, dni, email, numeroMatrícula y especialidad/es asociada/s ( ObjectId especialidades), direccion, telefono (Reutilización del esquema base de telefono.interfaces.ts y direccion.interfaces.ts), obrasSocial/es asociada/es.(ObjectId de ObrasSociales), activo ( para borrado logico)
+- **RF-4.2** -RF-4.2 - Alta de Médicos con Creación de Usuario Asociado
+  Descripción:
+  -El sistema debe permitir registrar un nuevo médico en la plataforma. La operación debe ser atómica, de modo que el alta del perfil profesional del médico y la creación de su cuenta de usuario en el sistema ocurran de manera conjunta.
+
+  Datos Obligatorios (Payload del Médico):
+
+-nombre: Nombre/s del médico (String).
+-apellido: Apellido/s del médico (String).
+-dni: Documento Nacional de Identidad (String, único).
+-email: Correo electrónico de contacto y de acceso (String, único, validado con formato de email).
+-numeroMatricula: Número de matrícula profesional (String, único).
+-especialidades: Listado de identificadores asociados (Array<ObjectId> referenciando a la colección de Especialidades).
+-direccion: Estructura de dirección, reutilizando el esquema base definido en direccion.interfaces.ts.
+-telefono: Estructura de teléfono, reutilizando el esquema base definido en telefono.interfaces.ts.
+-obrasSociales: Listado de obras sociales asociadas (Array<ObjectId> referenciando a la colección de ObrasSociales).
+-activo: Indicador de estado para soporte de borrado lógico (Boolean, por defecto true).
+
+Reglas de Negocio y Transaccionalidad:
+-Operación Atómica (Transacción de Base de Datos):Se debe iniciar una sesión de transacción (ClientSession en Mongoose / Replica Set).Se persiste el documento del médico en la colección correspondiente.Utilizando el \_id generado del médico, se crea de forma vinculada el registro en la colección de Usuarios (medicoId apuntando al médico, asignando el rol correspondiente Rol.MEDICO, el email y la contraseña hasheada).
+
+-Manejo de Errores y Rollback:
+Si alguna de las operaciones falla (por ejemplo, duplicidad de DNI, email o matrícula, o errores de validación de esquema), la transacción debe abortarse por completo (abortTransaction), revirtiendo cualquier inserción parcial para evitar registros huérfanos o inconsistencias en el sistema.
 
 - **RF-4.3** Unicidad y Restricciones:El sistema debe garantizar la unicidad de Medico mediante las siguientes reglas de validación:
 
@@ -51,7 +72,32 @@
 
 - **RF-5.1** - Catálogo de Paciente: El sistema debe permitir crear, listar, modificar y dar de baja (borrado lógico) pacientes.
 
-- **RF-5.2** - Alta de pacientes: El sistema debe permitir registrar pacientes. Los datos obligatorios son nombre, apellido, dni, sexo, email, direccion, telefono (Reutilización del esquema base de telefono.interfaces.ts y direccion.interfaces.ts), obrasSocial/es asociada/es.(ObjectId de ObrasSociales), activo ( para borrado logico)
+- **RF-5.2** - Alta de pacientes:
+  Descripción:
+  El sistema debe permitir registrar un nuevo paciente en la plataforma. La operación debe ser atómica, de modo que el alta del perfil del paciente y la creación de su cuenta de usuario en el sistema ocurran de manera conjunta.
+
+  Datos Obligatorios (Payload del Paciente):
+  -nombre: Nombre/s del paciente (String).
+  -apellido: Apellido/s del paciente (String).
+  -dni: Documento Nacional de Identidad (String, único).
+  -sexo: Sexo biológico o de registro (String / Enum según valores permitidos).
+  -email: Correo electrónico de contacto y de acceso (String, único, validado con formato de email).
+  -direccion: Estructura de dirección, reutilizando el esquema base definido en direccion.interfaces.ts.
+  -telefono: Estructura de teléfono, reutilizando el esquema base definido en telefono.interfaces.ts.
+  -obrasSociales: Listado de obras sociales asociadas (Array<ObjectId> referenciando a la colección de ObrasSociales).
+  -activo: Indicador de estado para soporte de borrado lógico (Boolean, por defecto true).
+  -password: Credencial de acceso inicial para la cuenta de usuario (String, que será hasheada en el backend).
+
+Reglas de Negocio y Transaccionalidad:
+Operación Atómica (Transacción de Base de Datos):Se debe iniciar una sesión de transacción (ClientSession en Mongoose / Replica Set).Se persiste el documento del paciente en la colección correspondiente.
+
+Utilizando el \_id generado del paciente, se crea de forma vinculada el registro en la colección de Usuarios (pacienteId apuntando al paciente, asignando el rol correspondiente Rol.PACIENTE, el email y la contraseña hasheada).
+
+Validaciones Previas y Unicidad:
+Se debe validar que no exista previamente un paciente registrado con el mismo dni o email antes de ejecutar la transacción.
+
+Manejo de Errores y Rollback:
+Si alguna de las operaciones falla (por ejemplo, duplicidad de DNI/email, errores de validación de esquemas o fallo al guardar el usuario), la transacción debe abortarse por completo (abortTransaction), revirtiendo cualquier inserción parcial para mantener la consistencia de la base de datos.
 
 - **RF-5.3** Unicidad y Restricciones:El sistema debe garantizar la unicidad de Pacientes mediante las siguientes reglas de validación:
 

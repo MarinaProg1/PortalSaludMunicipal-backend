@@ -1,7 +1,6 @@
 import { Document, Types } from "mongoose";
 import type {IDireccion} from "../../../utils/direccion.interfaces";
 import type {ITelefono } from "../../../utils/telefono.interfaces";
-import type {IObraSocial} from '../../obrasocial/types/obrasocial.interface';
 
 
 export interface IPaciente extends Document{
@@ -13,6 +12,6 @@ export interface IPaciente extends Document{
     email: string,
     direccion: IDireccion,
     telefono:ITelefono,
-    obraSocial:IObraSocial,
+    obraSocial?: Types.ObjectId | string | null;
     activo: boolean  
 }
