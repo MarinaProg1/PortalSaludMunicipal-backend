@@ -29,6 +29,10 @@ const UsuarioSchema = new Schema<IUsuario>(
             enum: Object.values(Rol),
             default: Rol.RECEPCIONISTA,
         },
+        debeCambiarPassword: {
+    type: Boolean,
+    default: true, 
+},
         activo: {
             type: Boolean,
             default: true,
@@ -40,10 +44,11 @@ const UsuarioSchema = new Schema<IUsuario>(
 );
 
 UsuarioSchema.set('toJSON', {
-    transform: (_documento: Document, usuarioRetorno: Record<string, any>) => {
-        usuarioRetorno.id = usuarioRetorno._id;
+    transform: (documento, usuarioRetorno: Record<string, any>) => {
+        usuarioRetorno.id = documento._id;
         delete usuarioRetorno._id;
         delete usuarioRetorno.__v;
+        delete usuarioRetorno.password;
     },
 });
 

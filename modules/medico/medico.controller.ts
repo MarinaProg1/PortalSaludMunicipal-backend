@@ -1,7 +1,11 @@
 import type { Request, Response } from "express";
+import bcrypt from 'bcrypt';
+import mongoose from "mongoose";
 import Medico from './medico.models';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
 import type { IMedicoDTO, IMedicoUpdateDTO } from './dtos/medico.schema';
+import { Usuario } from "../auth/usuario.models";
+import { Rol } from "../auth/enum/rol.enum";
 
 const getMedico = async (req: Request, res: Response) => {
   try {
@@ -25,19 +29,111 @@ const getMedico = async (req: Request, res: Response) => {
   }
 };
 
-const createMedico = async (req: Request<unknown, unknown, IMedicoDTO>, res: Response) => {
-  try {
-    
-    const { numeroMatricula, dni, email } = req.body;
-    if (await Medico.findOne({ numeroMatricula })) return respuestaEstandar(res, 409, false, 'Matrícula ya registrada');
-    if (await Medico.findOne({ dni })) return respuestaEstandar(res, 409, false, 'DNI ya registrado');
-    if (await Medico.findOne({ email })) return respuestaEstandar(res, 409, false, 'Email ya registrado');
+const createMedico = async (req: Request<unknown, unknown, IMedicoDTO & { password?: string; user?: string }>, res: Response) => {
+    const { numeroMatricula, dni, email, user: nombreUsuario, password, ...datosMedico } = req.body;
 
-    const nuevo = await Medico.create(req.body);
-    return respuestaEstandar(res, 201, true, 'Médico creado exitosamente', nuevo);
-  } catch (error: any) {
-    return respuestaEstandar(res, 500, false, 'Error al crear', error.message);
-  }
+    try {
+        // 1. Validaciones previas de duplicados (Matrícula, DNI, Email o User)
+        const condicionesOr: Array<{ email?: string; user?: string; dni?: string; numeroMatricula?: number }> = [
+            { email: email.toLowerCase() },
+            { dni },
+            { numeroMatricula }
+        ];
+
+        if (nombreUsuario) {
+            condicionesOr.push({ user: nombreUsuario });
+        }
+
+        // Verificamos si ya existe un usuario o médico con alguno de estos datos únicos
+        const usuarioExistente = await Usuario.findOne({
+            $or: [{ email: email.toLowerCase() }, ...(nombreUsuario ? [{ user: nombreUsuario }] : [])]
+        });
+
+        if (usuarioExistente) {
+            const campo = usuarioExistente.email === email.toLowerCase() ? 'correo electrónico' : 'nombre de usuario';
+            return respuestaEstandar(res, 400, false, `El ${campo} ya se encuentra registrado en el sistema`);
+        }
+
+        const medicoExistente = await Medico.findOne({
+            $or: [{ dni }, { numeroMatricula }, { email: email.toLowerCase() }]
+        });
+
+        if (medicoExistente) {
+            let mensaje = 'Ya existe un médico registrado con estos datos';
+            if (medicoExistente.dni === dni) mensaje = 'El DNI ya está registrado';
+            else if (medicoExistente.numeroMatricula === numeroMatricula) mensaje = 'La matrícula ya está registrada';
+            else if (medicoExistente.email === email.toLowerCase()) mensaje = 'El email ya está registrado';
+            
+            return respuestaEstandar(res, 409, false, mensaje);
+        }
+
+        // 2. Iniciamos la sesión y la transacción de Mongoose
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        try {
+            // 3. Hashear la contraseña (si no viene, usamos el DNI o la matrícula por defecto)
+            const passwordPlana = password || dni; 
+            const hashedPassword = await bcrypt.hash(passwordPlana, 10);
+
+            // 4. Crear el Usuario dentro de la transacción
+            const nuevoUsuario = await Usuario.create(
+                [
+                    {
+                        email,
+                        user: nombreUsuario || email,
+                        password: hashedPassword,
+                        rol: Rol.MEDICO, 
+                        debeCambiarPassword: true,
+                    }
+                ],
+                { session }
+            );
+
+            // 5. Crear el Médico dentro de la transacción
+            const nuevoMedico = await Medico.create(
+                [
+                    {
+                        ...datosMedico,
+                        numeroMatricula,
+                        dni,
+                        email,
+                        // usuario: nuevoUsuario[0]._id // Descomenta si guardas la referencia en el schema de médico
+                    }
+                ],
+                { session }
+            );
+
+            // 6. Confirmar transacción
+            await session.commitTransaction();
+            session.endSession();
+
+            const usuarioCreado = nuevoUsuario[0];
+            const medicoCreado = nuevoMedico[0];
+
+            return respuestaEstandar(res, 201, true, 'Médico y usuario creados exitosamente', {
+                medico: medicoCreado,
+                usuario: usuarioCreado ? {
+                    id: usuarioCreado.id,
+                    email: usuarioCreado.email,
+                    user: usuarioCreado.user,
+                } : null
+            });
+
+        } catch (innerError: any) {
+            // Si algo falla dentro de la transacción, hacemos rollback
+            await session.abortTransaction();
+            session.endSession();
+            throw innerError;
+        }
+
+    } catch (error: any) {
+        if (error?.code === 11000) {
+            return respuestaEstandar(res, 409, false, 'El email, DNI, matrícula o nombre de usuario ya están registrados');
+        }
+
+        return respuestaEstandar(res, 500, false, 'Error al crear el médico y su usuario', error.message);
+    }
 };
 
 

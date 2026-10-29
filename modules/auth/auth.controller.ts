@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { Usuario } from './usuario.models';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
+import { ICambiarPasswordDTO } from './dtos/auth.schemas';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'claveSecretaDesarrollo';
 
@@ -30,7 +31,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             { expiresIn: '9h' }
         );
 
-        return res.status(200).json({ ok: true, token });
+        return res.status(200).json({ 
+            ok: true, 
+            token, 
+            debeCambiarPassword: usuario.debeCambiarPassword 
+        });
     } catch (error) {
         next(error);
     }
@@ -58,5 +63,36 @@ export const registro = async (req: Request, res: Response, next: NextFunction) 
             return respuestaEstandar(res, 409, false, 'email o usuario ya registrado');
         }
         next(error);
+    }
+};
+export const cambiarPasswordPrimerLogin = async (req: Request<{ id: string }, unknown, ICambiarPasswordDTO>, res: Response) => {
+    try {
+
+        const reqAuth = req as Request & { usuario?: { id: string } };
+        const usuarioId = reqAuth.usuario?.id;
+        const { passwordActual, nuevaPassword } = req.body;
+
+        const usuario = await Usuario.findById(usuarioId);
+        if (!usuario) {
+            return respuestaEstandar(res, 404, false, 'Usuario no encontrado');
+        }
+
+        // Verificar que la contraseña actual sea correcta
+        const passwordOk = await bcrypt.compare(passwordActual, usuario.password);
+        if (!passwordOk) {
+            return respuestaEstandar(res, 400, false, 'La contraseña actual es incorrecta');
+        }
+
+        // Hashear la nueva contraseña
+        const hashedPassword = await bcrypt.hash(nuevaPassword, 10);
+
+        // Actualizar la contraseña y cambiar la bandera a false
+        usuario.password = hashedPassword;
+        usuario.debeCambiarPassword = false;
+        await usuario.save();
+
+        return respuestaEstandar(res, 200, true, 'Contraseña actualizada exitosamente');
+    } catch (error: any) {
+        return respuestaEstandar(res, 500, false, 'Error al cambiar la contraseña', error.message);
     }
 };

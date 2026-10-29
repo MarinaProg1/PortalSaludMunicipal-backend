@@ -18,3 +18,10 @@ export const registroSchema = z.object({
         rol: z.enum([Rol.ADMIN, Rol.RECEPCIONISTA]).optional(),
     }),
 });
+export const CambiarPasswordSchema = z.object({
+    body: z.object({
+        passwordActual: z.string().min(1, 'La contraseña actual es obligatoria'),
+        nuevaPassword: z.string().min(6, 'La nueva contraseña debe tener al menos 6 caracteres')
+    })
+});
+export type ICambiarPasswordDTO = z.infer<typeof CambiarPasswordSchema>['body'];

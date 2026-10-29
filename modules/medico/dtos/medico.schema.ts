@@ -30,6 +30,11 @@ export const MedicoSchema = z.object({
       .trim()
       .email("Email no válido")
       .toLowerCase(),
+     
+    user: z.string().min(3, 'El nombre de usuario debe tener al menos 3 caracteres').optional(),
+  
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional(),
+      
     
     especialidades: z.array(objectIdSchema)
       .min(1, "Debe incluir al menos una especialidad")
