@@ -11,7 +11,7 @@ const pacienteSchema = new Schema<IPaciente>({
     },
     apellido: {
         type: String,
-        required: [true, 'El apellido es obligatorio'],
+        required: [true, 'El nombre es obligatorio'],
         uppercase: true,
     },
     dni: {
@@ -39,8 +39,14 @@ const pacienteSchema = new Schema<IPaciente>({
         type: TelefonoSchema
     },
     obraSocial:{
-        type: Schema.Types.ObjectId,
-        ref: 'ObraSocial', 
+        type: Schema.Types.ObjectId, //si no tiene obra social que sea null , tener una opcion que sea otras.
+        ref: 'ObraSocial',
+        default: null,
+    },
+    numeroAfiliado: {
+        type: String,
+        trim: true,
+        default: null
     },
      activo: {
         type: Boolean,
@@ -54,7 +60,7 @@ const pacienteSchema = new Schema<IPaciente>({
 })
 
 pacienteSchema.set('toJSON', {
-    transform: (documento: Document, pacienteRetorno: Record<string, any>) => {
+    transform: (_documento: Document, pacienteRetorno: any) => {
         pacienteRetorno.id = pacienteRetorno._id;
         delete pacienteRetorno._id;
         delete pacienteRetorno.__v;
