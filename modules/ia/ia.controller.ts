@@ -22,46 +22,52 @@ export const sugerirAsistencia = async (req: Request, res: Response) => {
         const antecedentesQuirurgicos = historial?.antecedentesQuirurgicos || "Sin antecedentes";
 
         const prompt = `
-        Actúa como un asistente de apoyo para un medico clinico.
+    Actúa como un asistente médico para apoyo clínico en consulta ambulatoria. 
+    Tu única función es orientar, NO reemplazar el criterio del médico tratante.
+            
+    DATOS DEL PACIENTE:
+    - Nombre y Apellido: ${paciente.nombre} ${paciente.apellido}
+    - DNI: ${paciente.dni}
+    - Sexo: ${paciente.sexo}
+            
+    HISTORIAL MÉDICO:
+    - Alergias: ${alergias}
+    - Enfermedades crónicas: ${enfermedadesCronicas}
+    - Medicación actual: ${medicacionActual}
+    - Antecedentes familiares: ${antecedentesFamiliares}
+    - Antecedentes quirúrgicos: ${antecedentesQuirurgicos}
+            
+    CONSULTA ACTUAL:
+    - Motivo de consulta: ${motivo || "No especificado"}
+    - Síntomas: ${sintomas || "No especificados"}
+            
+    INSTRUCCIONES:
+    - Sé MUY CONCISO. Usa viñetas cortas. Máximo 2-4 renglones por apartado.
+    - Ten en cuenta SIEMPRE las alergias, la medicación actual y las enfermedades crónicas para descartar contraindicaciones.
+    - Sugiere ÚNICAMENTE lo estrictamente necesario para una primera valoración ambulatoria.
+    - Los medicamentos deben ser ORIENTATIVOS. Usa nombres genéricos, con posología habitual y forma de administración si aplica.
+    - Si NO corresponde indicación farmacológica, escribe: "No requiere medicación por ahora".
+    - Los estudios deben ser concretos (ej: Hemograma completo, Orina completa, Glucemia, etc). No sugieras "panel amplio" sin especificar.
+    - Prioriza signos de alarma y cuándo derivar o acudir a urgencias si correspondiere.
+    - Responde EXCLUSIVAMENTE con el siguiente formato, sin texto extra, sin introducción ni conclusión.
+            
+    FORMATO OBLIGATORIO:
+            
+    OBSERVACIONES SUGERIDAS:
+    - (breve descripción objetiva de lo relevante)
+            
+    HIPÓTESIS A CONSIDERAR:
+    - (máximo 2-3 hipótesis más probables)
+            
+    ESTUDIOS A SOLICITAR:
+    - (solo los necesarios. Si ninguno, indicar: "Ninguno por ahora")
 
-        Tu tarea es sugerir la asistencia médica más adecuada para un paciente basado en su historial médico y los síntomas actuales que presenta.
-Datos del paciente:
-- Nombre y apellido: ${paciente.nombre} ${paciente.apellido}
-- DNI: ${paciente.dni}
-- Sexo: ${paciente.sexo}
-- Email: ${paciente.email || "No registrado"}
+    MEDICAMENTOS A CONSIDERAR (ORIENTATIVOS):
+    - (tener en cuenta alergias y medicación actual. Si no corresponde, indicar lo solicitado)
 
-Motivo de consulta: ${motivo || "No especificado"}
-Síntomas descriptos: ${sintomas || "No especificados"}
-
-Historial médico:
-- Alergias: ${alergias}
-- Enfermedades crónicas: ${enfermedadesCronicas}
-- Medicación actual: ${medicacionActual}
-- Antecedentes familiares: ${antecedentesFamiliares}
-- Antecedentes quirúrgicos: ${antecedentesQuirurgicos}
-
-Genera una sugerencia práctica para el médico con el siguiente formato:
-
-OBSERVACIONES SUGERIDAS:
-[Escribir en lenguaje clínico claro, objetivo y breve, para completar directamente en el campo "observaciones" de la consulta médica]
-
-HIPÓTESIS A CONSIDERAR:
-[Máximo 2 o 3 hipótesis razonables, siempre aclarando que son orientativas]
-
-ESTUDIOS A VALORAR:
-[Si corresponde, indicar estudios simples a tener en cuenta]
-
-RECOMENDACIONES:
-[Recomendaciones generales para esta consulta]
-
-IMPORTANTE:
-- Usa un tono profesional pero conciso.
-- NO recetes dosis exactas de medicamentos controlados.
-- NO asegures un diagnóstico certero.
-- Prioriza la seguridad y el criterio médico.
-- Redactalo listo para que el médico lo pueda editar y guardar tal cual o con modificaciones.
-`.trim();
+    RECOMENDACIONES:
+    - (medidas generales, signos de alarma y seguimiento)
+    `.trim();
 
         const respuestaIa = await axios.post(
             process.env.GROQ_URL as string,
