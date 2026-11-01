@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { EstadoTurno } from './enum/estadoTurno.enum';
 import { Turno } from './turno.models';
-import type { ICreateTurnoDTO, IQueryUrgencia } from './dtos/turno.schema';
+import type { ICreateTurnoDTO, IQueryUrgencia, IUpdateTurnoDTO } from './dtos/turno.schema';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
 
 const getTurnos = async (
@@ -37,6 +37,33 @@ const getTurnos = async (
     return respuestaEstandar(res, 500, false, 'Error interno del servidor', error.message);
   }
 };
+const getTurnoById = async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const pacientePopulate = {
+      path: 'paciente',
+      select: 'nombre apellido obraSocial',
+      populate: {
+        path: 'obraSocial',
+        select: 'razonSocial'
+      }
+    };
+
+    const turno = await Turno.findById(id)
+      .populate(pacientePopulate)
+      .populate('medico', 'nombre apellido')
+      .populate('especialidad', 'nombre');
+
+    if (!turno) {
+      return respuestaEstandar(res, 404, false, `Turno no encontrado con ID ${id}`);
+    }
+
+    return respuestaEstandar(res, 200, true, 'Turno obtenido exitosamente', turno);
+  } catch (error: any) {
+    return respuestaEstandar(res, 400, false, 'ID con formato inválido', error.message);
+  }
+};
 
 const createTurno = async (
   req: Request<unknown, unknown, ICreateTurnoDTO, IQueryUrgencia>,
@@ -69,7 +96,57 @@ const createTurno = async (
     return respuestaEstandar(res, 500, false, 'Error interno del servidor', error.message);
   }
 };
+const updateTurno = async (
+  req: Request<{ id: string }, unknown, IUpdateTurnoDTO>,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const datosActualizacion = req.body;
 
+    const pacientePopulate = {
+      path: 'paciente',
+      select: 'nombre apellido obraSocial',
+      populate: {
+        path: 'obraSocial',
+        select: 'razonSocial'
+      }
+    };
+
+    const turnoActualizado = await Turno.findByIdAndUpdate(
+      id,
+      datosActualizacion,
+      { new: true, runValidators: true } // new: true devuelve el documento actualizado; runValidators ejecuta las validaciones del modelo
+    )
+      .populate(pacientePopulate)
+      .populate('medico', 'nombre apellido')
+      .populate('especialidad', 'nombre');
+
+    if (!turnoActualizado) {
+      return respuestaEstandar(res, 404, false, `Turno no encontrado con ID ${id}`);
+    }
+
+    return respuestaEstandar(res, 200, true, 'Turno actualizado exitosamente', turnoActualizado);
+  } catch (error: any) {
+    // Capturar duplicados por índice único en MongoDB (ej. mismo médico, fecha y hora)
+    if (error.code === 11000) {
+      return respuestaEstandar(
+        res, 
+        409, 
+        false, 
+        'El médico ya tiene asignado un turno en la misma fecha y hora', 
+        null
+      );
+    }
+
+    if (error.name === 'ValidationError') {
+      const errores = Object.values(error.errors).map((err: any) => err.message);
+      return respuestaEstandar(res, 400, false, 'Error de validación', errores);
+    }
+
+    return respuestaEstandar(res, 500, false, 'Error interno del servidor', error.message);
+  }
+};
 const deleteTurno = async (req: Request<{ id: string }>, res: Response) => {
   try {
     const { id } = req.params;
@@ -111,4 +188,4 @@ const marcarAtendido = async (req: Request<{ id: string }>, res: Response) => {
   }
 };
 
-export { getTurnos, createTurno, deleteTurno, marcarAtendido };
+export { getTurnos, getTurnoById , createTurno, updateTurno, deleteTurno, marcarAtendido };

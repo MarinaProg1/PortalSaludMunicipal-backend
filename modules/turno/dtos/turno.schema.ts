@@ -26,8 +26,12 @@ export const queryUrgenciaSchema = z.object({
         urgencia: z.enum(['true', 'false']).optional()
     })
 });
+export const UpdateTurnoSchema = z.object({
+    body: CreateTurnoSchema.shape.body.partial(),
+});
 
-export const UpdateTurnoSchema = CreateTurnoSchema.partial();
+
+
 
 
 export type ICreateTurnoDTO = z.infer<typeof CreateTurnoSchema>['body'];
