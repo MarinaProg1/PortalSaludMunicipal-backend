@@ -1,10 +1,3 @@
-// CONTROLLER DE CONSULTA MÉDICA
-// Hace: CRUD con populate (al listar traer los nombres de paciente/turno en vez de solo el id).
-// Se conecta con: ./consultamedica.models, ../../utils/respuestaEstandar.
-// IMPORTANTE: populate('paciente') y populate('turno') funcionan cuando tu compañera tenga
-// los models 'Paciente' y 'Turno' registrados. El populate de 'medico' lo dejo COMENTADO
-// porque el modelo Medico todavia no existe: si lo activas antes, el server tira error
-// MissingSchemaError. Descomentalo cuando exista el modulo medico.
 import type { Request, Response, NextFunction } from 'express';
 import { ConsultaMedica } from './consultamedica.models';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
@@ -15,9 +8,9 @@ import { respuestaEstandar } from '../../utils/respuestaEstandar';
 export const listar = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const consultas = await ConsultaMedica.find()
-            .populate('paciente')
+            .populate('paciente', 'nombre apellido dni email')
+            .populate('medico', 'nombre apellido numeroMatricula')
             .populate('turno');
-            // .populate('medico')   <- descomentar cuando exista el modelo Medico
         return respuestaEstandar(res, 200, true, 'consultas medicas listadas', consultas);
     } catch (error) {
         next(error);
@@ -32,9 +25,9 @@ export const obtenerUna = async (req: Request, res: Response, next: NextFunction
             return respuestaEstandar(res, 400, false, 'id no valido');
         }
         const consulta = await ConsultaMedica.findById(id)
-            .populate('paciente')
+            .populate('paciente', 'nombre apellido dni email')
+            .populate('medico', 'nombre apellido numeroMatricula')
             .populate('turno');
-            // .populate('medico')
         if (!consulta) {
             return respuestaEstandar(res, 404, false, 'consulta no encontrada');
         }

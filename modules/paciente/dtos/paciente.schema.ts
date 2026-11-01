@@ -16,9 +16,12 @@ export const CrearPacienteSchema = z.object({
 
          direccion:DireccionZodSchema,
          telefono:TelefonoZodSchema,
+
          obraSocial: z.string()
-           .length(24, 'ID de Obra Social inválido')
-           .optional().default("Sin obra social"),
+           .length(24, 'ID de Obra Social involido')
+           .optional().default('Sin obra social'),
+         numeroAfiliado: z.string().trim().optional().nullable().default(null),
+
          activo: z.boolean()
     })
 })

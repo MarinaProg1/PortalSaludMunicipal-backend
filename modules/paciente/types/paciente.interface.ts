@@ -13,5 +13,6 @@ export interface IPaciente extends Document{
     direccion: IDireccion,
     telefono:ITelefono,
     obraSocial?: Types.ObjectId | string | null;
+    numeroAfiliado?: string | null;
     activo: boolean  
 }
