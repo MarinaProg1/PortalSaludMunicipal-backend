@@ -130,6 +130,24 @@ const nuevoUsuario = await Usuario.create(
 };
 const updatePaciente = async (req: Request<{ id: string }, unknown, IActualizarPacienteDTO>, res: Response) => {
     try {
+        const pacienteAnterior = await Paciente.findById(req.params.id);
+
+        if (!pacienteAnterior) {
+            return respuestaEstandar(res, 404, false, 'Paciente no encontrado');
+        }
+
+        const emailAnterior = (pacienteAnterior.email || '').toLowerCase();
+        const emailNuevo = req.body.email ? req.body.email.toLowerCase() : null;
+
+        // Si cambia el email, verificamos que no lo use otro usuario antes de actualizar
+        if (emailNuevo && emailNuevo !== emailAnterior) {
+            const usuarioConEmail = await Usuario.findOne({ email: emailNuevo });
+
+            if (usuarioConEmail) {
+                return respuestaEstandar(res, 409, false, 'El correo electrónico ya está registrado en el sistema');
+            }
+        }
+
         const pacienteActualizado = await Paciente.findByIdAndUpdate(
             req.params.id,
             { $set: req.body },
@@ -142,6 +160,25 @@ const updatePaciente = async (req: Request<{ id: string }, unknown, IActualizarP
 
         if (!pacienteActualizado) {
             return respuestaEstandar(res, 404, false, 'Paciente no encontrado');
+        }
+
+        // Mantener sincronizado el email del usuario de login del paciente
+        if (emailNuevo && emailNuevo !== emailAnterior) {
+            const usuarioPaciente = await Usuario.findOne({
+                email: emailAnterior,
+                rol: Rol.PACIENTE,
+            });
+
+            if (usuarioPaciente) {
+                const datosUsuario: Record<string, string> = { email: emailNuevo };
+
+                // Si el nombre de usuario era el email viejo, también lo actualizamos
+                if ((usuarioPaciente.user || '').toLowerCase() === emailAnterior) {
+                    datosUsuario.user = emailNuevo;
+                }
+
+                await Usuario.updateOne({ _id: usuarioPaciente._id }, { $set: datosUsuario });
+            }
         }
 
         return respuestaEstandar(res, 200, true, 'Paciente actualizado exitosamente', pacienteActualizado);
@@ -180,6 +217,14 @@ const deletePaciente = async (req: Request<{ id: string }>, res: Response) => {
 
         if (!pacienteBorrado) {
             return respuestaEstandar(res, 404, false, 'Paciente no encontrado');
+        }
+
+        // Eliminar también el usuario de login asociado al paciente
+        if (pacienteBorrado.email) {
+            await Usuario.deleteOne({
+                email: pacienteBorrado.email.toLowerCase(),
+                rol: Rol.PACIENTE,
+            });
         }
 
         return respuestaEstandar(res, 200, true, 'Paciente eliminado correctamente', pacienteBorrado);
