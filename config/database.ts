@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 export const connectDB = async (): Promise<void> => {
     try {
-        const uri = process.env.DATABASE_URL || process.env.DATABASE_URL_ATLAS || '';
+        const uri = process.env.MONGO_URI || process.env.DATABASE_URL || process.env.MONGO_URI || process.env.DATABASE_URL_ATLAS || '';
         await mongoose.connect(uri);
     } catch (error) {
         console.error('�Y"� Error al conectar a la base de datos:', error);
