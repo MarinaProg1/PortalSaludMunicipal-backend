@@ -69,20 +69,19 @@ const createPaciente = async (req: Request<unknown, unknown, ICrearPacienteDTO &
             const passwordPlana = password || datosPaciente.dni; // Password por defecto (ej: DNI) si no viene en el body
             const hashedPassword = await bcrypt.hash(passwordPlana, 10);
 
-           
             // 4. Crear el Usuario dentro de la transacción
-const nuevoUsuario = await Usuario.create(
-    [
-        {
-            email,
-            user: nombreUsuario || email,
-            password: hashedPassword,
-            rol: Rol.PACIENTE, 
-            debeCambiarPassword: true,
-        }
-    ],
-    { session }
-);
+            const nuevoUsuario = await Usuario.create(
+                [
+                    {
+                        email,
+                        user: nombreUsuario || email,
+                        password: hashedPassword,
+                        rol: Rol.PACIENTE,
+                        debeCambiarPassword: true,
+                    }
+                ],
+                { session }
+            );
 
             // 5. Crear el Paciente dentro de la transacción
             const nuevoPaciente = await Paciente.create(
@@ -90,15 +89,13 @@ const nuevoUsuario = await Usuario.create(
                     {
                         ...datosPaciente,
                         email,
-                        // usuario: nuevoUsuario[0]._id // Descomenta si guardas la referencia en el schema de paciente
                     }
                 ],
                 { session }
             );
 
             // 6. Confirmar transacción
-          await session.commitTransaction();
-            session.endSession();
+            await session.commitTransaction();
 
             const usuarioCreado = nuevoUsuario[0];
             const pacienteCreado = nuevoPaciente[0];
@@ -113,15 +110,47 @@ const nuevoUsuario = await Usuario.create(
             });
 
         } catch (innerError: any) {
-            // Si algo falla dentro de la transacción, hacemos rollback
-            await session.abortTransaction();
-            session.endSession();
+            // Si algo falla dentro de la transacción, hacemos rollback.
+            // Si Mongo ya la abortó automáticamente, no dejamos que ese error tape el original.
+            try {
+                await session.abortTransaction();
+            } catch {
+                // La transacción ya estaba abortada
+            }
+
             throw innerError; // Lo lanzamos al catch externo para manejarlo
+        } finally {
+            await session.endSession();
         }
 
     } catch (error: any) {
-        // Manejo de errores por índice único de MongoDB (por si hay concurrencia exacta)
-        if (error?.code === 11000) {
+        const mensajeError = String(error?.message || '');
+        const esDuplicado = error?.code === 11000 || mensajeError.includes('E11000');
+
+        // Mongoose puede devolver un error de validación con el mensaje del campo `unique`
+        const esDniDuplicado =
+            mensajeError.includes('El DNI del paciente debe ser único') ||
+            (esDuplicado && (error?.keyPattern?.dni || mensajeError.includes('dni')));
+
+        const esEmailDuplicado =
+            mensajeError.includes('El correo electrónico del paciente debe ser único') ||
+            (esDuplicado && (error?.keyPattern?.email || mensajeError.includes('email')));
+
+        const esUsuarioDuplicado = esDuplicado && (error?.keyPattern?.user || mensajeError.includes('user'));
+
+        if (esDniDuplicado) {
+            return respuestaEstandar(res, 409, false, 'El DNI ya está registrado');
+        }
+
+        if (esEmailDuplicado) {
+            return respuestaEstandar(res, 409, false, 'El correo electrónico ya está registrado');
+        }
+
+        if (esUsuarioDuplicado) {
+            return respuestaEstandar(res, 409, false, 'El nombre de usuario ya está registrado');
+        }
+
+        if (esDuplicado) {
             return respuestaEstandar(res, 409, false, 'El email o el nombre de usuario ya están registrados');
         }
 
@@ -183,6 +212,17 @@ const updatePaciente = async (req: Request<{ id: string }, unknown, IActualizarP
 
         return respuestaEstandar(res, 200, true, 'Paciente actualizado exitosamente', pacienteActualizado);
     } catch (error: any) {
+        const mensajeError = String(error?.message || '');
+        const esDuplicado = error?.code === 11000 || mensajeError.includes('E11000');
+
+        if (esDuplicado || mensajeError.includes('debe ser único')) {
+            if (mensajeError.includes('DNI') || error?.keyPattern?.dni) {
+                return respuestaEstandar(res, 409, false, 'El DNI ya está registrado');
+            }
+
+            return respuestaEstandar(res, 409, false, 'El correo electrónico ya está registrado');
+        }
+
         return respuestaEstandar(res, 400, false, 'Error al actualizar el paciente', error.message);
     }
 };
