@@ -12,11 +12,11 @@ const getPacientes = async (req: Request<unknown, unknown, unknown, IQueryPacien
         const { obraSocial, dni } = req.query;
         const filtro: Record<string, string> = {};
 
-        if (obraSocial) filtro['obraSocial.razonSocial'] = obraSocial.toUpperCase();
+        if (obraSocial) filtro.obraSocial = obraSocial;
 
         if (dni) filtro.dni = dni;
 
-        const pacientes = await Paciente.find(filtro);
+        const pacientes = await Paciente.find(filtro).populate('obraSocial');
 
         return respuestaEstandar(res, 200, true, 'Pacientes obtenidos exitosamente', pacientes);
     } catch (error: any) {

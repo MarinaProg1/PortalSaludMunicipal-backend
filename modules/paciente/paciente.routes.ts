@@ -9,7 +9,7 @@ const router = Router();
 router.get('/', getPacientes);
 router.get('/:id', getPacienteById);
 router.post('/', validarSchema(CrearPacienteSchema), createPaciente);
-router.put('/eliminar', deletePaciente);
+router.delete('/:id', deletePaciente);
 router.put('/:id', validarSchema(ActualizarPacienteSchema), updatePaciente);
 router.patch('/:id/contacto-direccion', validarSchema(ActualizarContactoDireccionSchema), updateContactoDireccion);
 
