@@ -7,6 +7,8 @@ import { respuestaEstandar } from '../../utils/respuestaEstandar';
 import mongoose from "mongoose";
 import { Rol } from "../auth/enum/rol.enum";
 import type { RequestAutenticado } from '../../middlewares/autenticar.middleware';
+import { Turno } from "../turno/turno.models";
+import { ConsultaMedica } from "../consultamedica/consultamedica.models";
 
 const getPacientes = async (req: Request<unknown, unknown, unknown, IQueryPacientes>, res: Response) => {
     try {
@@ -273,6 +275,55 @@ const updateContactoDireccion = async (req: Request<{ id: string }, unknown, IAc
     }
 };
 
+// Devuelve los turnos de un paciente junto con la consulta médica de cada turno.
+// Por defecto incluye los turnos futuros y los de los últimos 30 días.
+// Con ?historial=true devuelve todo el historial sin filtro de fecha.
+const getTurnosPaciente = async (
+    req: Request<{ id: string }, unknown, unknown, { historial?: string }>,
+    res: Response
+) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return respuestaEstandar(res, 400, false, 'El id del paciente no es valido');
+        }
+
+        const paciente = await Paciente.findById(id);
+
+        if (!paciente) {
+            return respuestaEstandar(res, 404, false, 'Paciente no encontrado');
+        }
+
+        const filtro: Record<string, unknown> = { paciente: paciente._id, activo: true };
+
+        if (req.query.historial !== 'true') {
+            const limite = new Date();
+            limite.setDate(limite.getDate() - 30);
+            limite.setHours(0, 0, 0, 0);
+            filtro.fecha = { $gte: limite };
+        }
+
+        const turnos = await Turno.find(filtro)
+            .populate('medico', 'nombre apellido')
+            .populate('especialidad', 'nombre')
+            .sort({ fecha: 1, hora: 1 });
+
+        const consultas = await ConsultaMedica.find({
+            turno: { $in: turnos.map((turno) => turno._id) },
+            paciente: paciente._id,
+            activo: true,
+        }).select('turno motivo diagnostico tratamiento observaciones estado fecha');
+
+        return respuestaEstandar(res, 200, true, 'Turnos del paciente obtenidos exitosamente', {
+            turnos,
+            consultas,
+        });
+    } catch (error: any) {
+        return respuestaEstandar(res, 500, false, 'Error al obtener los turnos del paciente', error.message);
+    }
+};
+
 const deletePaciente = async (req: Request<{ id: string }>, res: Response) => {
     try {
         const pacienteBorrado = await Paciente.findByIdAndDelete(req.params.id);
@@ -295,4 +346,4 @@ const deletePaciente = async (req: Request<{ id: string }>, res: Response) => {
     }
 };
 
-export { getPacientes, getPacienteById, getMiPerfil, createPaciente, deletePaciente, updatePaciente, updateContactoDireccion };
+export { getPacientes, getPacienteById, getMiPerfil, getTurnosPaciente, createPaciente, deletePaciente, updatePaciente, updateContactoDireccion };
