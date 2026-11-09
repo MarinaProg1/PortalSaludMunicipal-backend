@@ -4,6 +4,7 @@ import { Turno } from './turno.models';
 import type { ICreateTurnoDTO, IQueryUrgencia, IUpdateTurnoDTO } from './dtos/turno.schema';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
 import Paciente from '../paciente/paciente.models';
+import { ConsultaMedica } from '../consultamedica/consultamedica.models';
 import type { RequestAutenticado } from '../../middlewares/autenticar.middleware';
 
 const getTurnos = async (
@@ -217,4 +218,44 @@ const getMisTurnos = async (req: Request, res: Response) => {
   }
 };
 
-export { getTurnos, getTurnoById , createTurno, updateTurno, deleteTurno, marcarAtendido, getMisTurnos };
+// Devuelve el detalle de un turno propio junto con la consulta médica asociada (si existe)
+const getMiTurnoById = async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const usuario = (req as RequestAutenticado).usuario;
+
+    if (!usuario?.email) {
+      return respuestaEstandar(res, 401, false, 'No autorizado');
+    }
+
+    const paciente = await Paciente.findOne({ email: usuario.email.toLowerCase() });
+
+    if (!paciente) {
+      return respuestaEstandar(res, 404, false, 'No se encontró la ficha de paciente asociada a tu usuario');
+    }
+
+    const turno = await Turno.findOne({ _id: req.params.id, paciente: paciente._id })
+      .populate('medico', 'nombre apellido')
+      .populate('especialidad', 'nombre');
+
+    if (!turno) {
+      return respuestaEstandar(res, 404, false, 'Turno no encontrado');
+    }
+
+    const consulta = await ConsultaMedica.findOne({
+      turno: turno._id,
+      paciente: paciente._id,
+      activo: true,
+    })
+      .populate('medico', 'nombre apellido')
+      .select('motivo diagnostico tratamiento observaciones estado fecha medico');
+
+    return respuestaEstandar(res, 200, true, 'Turno obtenido exitosamente', {
+      turno,
+      consulta: consulta || null,
+    });
+  } catch (error: any) {
+    return respuestaEstandar(res, 400, false, 'Error al obtener el turno', error.message);
+  }
+};
+
+export { getTurnos, getTurnoById , createTurno, updateTurno, deleteTurno, marcarAtendido, getMisTurnos, getMiTurnoById };

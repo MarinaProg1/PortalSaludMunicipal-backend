@@ -1,5 +1,5 @@
 import {Router} from 'express';
-import { getTurnos, createTurno, updateTurno, deleteTurno, marcarAtendido, getTurnoById, getMisTurnos } from './turno.controller';
+import { getTurnos, createTurno, updateTurno, deleteTurno, marcarAtendido, getTurnoById, getMisTurnos, getMiTurnoById } from './turno.controller';
 import { CreateTurnoSchema, UpdateTurnoSchema } from './dtos/turno.schema';
 import { validarSchema } from '../../middlewares/validarDatos.middleware';
 import { verificarTurnoValido } from '../../middlewares/verificarTurnoValido.middleware';
@@ -9,6 +9,7 @@ const router = Router();
 
 // Rutas propias del paciente logueado (deben ir antes de /:id)
 router.get('/mis-turnos', autenticar, permitirRoles('PACIENTE'), getMisTurnos);
+router.get('/mis-turnos/:id', autenticar, permitirRoles('PACIENTE'), getMiTurnoById);
 router.post(
   '/mis-turnos',
   autenticar,
