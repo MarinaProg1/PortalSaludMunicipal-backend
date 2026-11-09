@@ -3,6 +3,8 @@ import { EstadoTurno } from './enum/estadoTurno.enum';
 import { Turno } from './turno.models';
 import type { ICreateTurnoDTO, IQueryUrgencia, IUpdateTurnoDTO } from './dtos/turno.schema';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
+import Paciente from '../paciente/paciente.models';
+import type { RequestAutenticado } from '../../middlewares/autenticar.middleware';
 
 const getTurnos = async (
  req: Request<unknown, unknown, unknown, { id?: string }>,
@@ -189,4 +191,30 @@ const marcarAtendido = async (req: Request<{ id: string }>, res: Response) => {
   }
 };
 
-export { getTurnos, getTurnoById , createTurno, updateTurno, deleteTurno, marcarAtendido };
+// Devuelve únicamente los turnos del paciente logueado
+const getMisTurnos = async (req: Request, res: Response) => {
+  try {
+    const usuario = (req as RequestAutenticado).usuario;
+
+    if (!usuario?.email) {
+      return respuestaEstandar(res, 401, false, 'No autorizado');
+    }
+
+    const paciente = await Paciente.findOne({ email: usuario.email.toLowerCase() });
+
+    if (!paciente) {
+      return respuestaEstandar(res, 404, false, 'No se encontró la ficha de paciente asociada a tu usuario');
+    }
+
+    const turnos = await Turno.find({ paciente: paciente._id, activo: true })
+      .populate('medico', 'nombre apellido')
+      .populate('especialidad', 'nombre')
+      .sort({ fecha: 1, hora: 1 });
+
+    return respuestaEstandar(res, 200, true, 'Turnos obtenidos exitosamente', turnos);
+  } catch (error: any) {
+    return respuestaEstandar(res, 500, false, 'Error al obtener los turnos', error.message);
+  }
+};
+
+export { getTurnos, getTurnoById , createTurno, updateTurno, deleteTurno, marcarAtendido, getMisTurnos };

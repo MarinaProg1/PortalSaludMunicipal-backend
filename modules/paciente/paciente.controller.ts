@@ -6,6 +6,7 @@ import type { ICrearPacienteDTO, IQueryPacientes, IActualizarPacienteDTO, IActua
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
 import mongoose from "mongoose";
 import { Rol } from "../auth/enum/rol.enum";
+import type { RequestAutenticado } from '../../middlewares/autenticar.middleware';
 
 const getPacientes = async (req: Request<unknown, unknown, unknown, IQueryPacientes>, res: Response) => {
     try {
@@ -21,6 +22,27 @@ const getPacientes = async (req: Request<unknown, unknown, unknown, IQueryPacien
         return respuestaEstandar(res, 200, true, 'Pacientes obtenidos exitosamente', pacientes);
     } catch (error: any) {
         return respuestaEstandar(res, 500, false, 'Error al obtener los pacientes', error.message);
+    }
+};
+
+// Devuelve la ficha del paciente logueado (a partir del email del token)
+const getMiPerfil = async (req: Request, res: Response) => {
+    try {
+        const usuario = (req as RequestAutenticado).usuario;
+
+        if (!usuario?.email) {
+            return respuestaEstandar(res, 401, false, 'No autorizado');
+        }
+
+        const paciente = await Paciente.findOne({ email: usuario.email.toLowerCase() }).populate('obraSocial');
+
+        if (!paciente) {
+            return respuestaEstandar(res, 404, false, 'No se encontró la ficha de paciente asociada a tu usuario');
+        }
+
+        return respuestaEstandar(res, 200, true, 'Perfil obtenido exitosamente', paciente);
+    } catch (error: any) {
+        return respuestaEstandar(res, 500, false, 'Error al obtener el perfil', error.message);
     }
 };
 
@@ -273,4 +295,4 @@ const deletePaciente = async (req: Request<{ id: string }>, res: Response) => {
     }
 };
 
-export { getPacientes, getPacienteById, createPaciente, deletePaciente, updatePaciente, updateContactoDireccion };
+export { getPacientes, getPacienteById, getMiPerfil, createPaciente, deletePaciente, updatePaciente, updateContactoDireccion };
