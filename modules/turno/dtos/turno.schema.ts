@@ -17,6 +17,7 @@ export const CreateTurnoSchema = z.object({
             .string({ message: 'La hora es obligatoria' })
             .regex(regexHora, 'La hora debe tener el formato HH:mm válido (ej: 08:30)'),
         estado: z.enum(EstadoTurno).optional().default(EstadoTurno.PENDIENTE),
+        observaciones: z.string().trim().max(500, 'Las observaciones no pueden superar los 500 caracteres').optional().default(''),
         activo: z.boolean().optional().default(true),
     }),
 });

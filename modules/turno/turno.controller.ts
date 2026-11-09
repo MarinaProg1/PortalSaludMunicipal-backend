@@ -71,11 +71,12 @@ const createTurno = async (
 ) => {
   try {
     const esUrgente = req.query.urgencia === 'true';
+    const observaciones = (req.body.observaciones || '').trim();
 
     const datosDelTurno = {
       ...req.body,
       estado: esUrgente ? EstadoTurno.ATENDIDO : EstadoTurno.PENDIENTE,
-      observaciones: esUrgente ? 'Ingreso por guardia médica' : '',
+      observaciones: observaciones || (esUrgente ? 'Ingreso por guardia médica' : ''),
     };
 
     if (esUrgente) console.log('🚨 ALERTA: registrado un turno de urgencia');
