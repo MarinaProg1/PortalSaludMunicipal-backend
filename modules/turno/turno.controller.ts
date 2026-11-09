@@ -192,8 +192,13 @@ const marcarAtendido = async (req: Request<{ id: string }>, res: Response) => {
   }
 };
 
-// Devuelve únicamente los turnos del paciente logueado
-const getMisTurnos = async (req: Request, res: Response) => {
+// Devuelve únicamente los turnos del paciente logueado.
+// Por defecto incluye los turnos futuros y los de los últimos 30 días.
+// Con ?historial=true devuelve todo el historial sin filtro de fecha.
+const getMisTurnos = async (
+  req: Request<unknown, unknown, unknown, { historial?: string }>,
+  res: Response
+) => {
   try {
     const usuario = (req as RequestAutenticado).usuario;
 
@@ -207,7 +212,16 @@ const getMisTurnos = async (req: Request, res: Response) => {
       return respuestaEstandar(res, 404, false, 'No se encontró la ficha de paciente asociada a tu usuario');
     }
 
-    const turnos = await Turno.find({ paciente: paciente._id, activo: true })
+    const filtro: Record<string, unknown> = { paciente: paciente._id, activo: true };
+
+    if (req.query.historial !== 'true') {
+      const limite = new Date();
+      limite.setDate(limite.getDate() - 30);
+      limite.setHours(0, 0, 0, 0);
+      filtro.fecha = { $gte: limite };
+    }
+
+    const turnos = await Turno.find(filtro)
       .populate('medico', 'nombre apellido')
       .populate('especialidad', 'nombre')
       .sort({ fecha: 1, hora: 1 });
