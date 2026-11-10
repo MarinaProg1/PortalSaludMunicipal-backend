@@ -3,6 +3,9 @@ import { EstadoTurno } from './enum/estadoTurno.enum';
 import { Turno } from './turno.models';
 import type { ICreateTurnoDTO, IQueryUrgencia, IUpdateTurnoDTO } from './dtos/turno.schema';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
+import Paciente from '../paciente/paciente.models';
+import { ConsultaMedica } from '../consultamedica/consultamedica.models';
+import type { RequestAutenticado } from '../../middlewares/autenticar.middleware';
 
 const getTurnos = async (
  req: Request<unknown, unknown, unknown, { id?: string }>,
@@ -71,11 +74,12 @@ const createTurno = async (
 ) => {
   try {
     const esUrgente = req.query.urgencia === 'true';
+    const observaciones = (req.body.observaciones || '').trim();
 
     const datosDelTurno = {
       ...req.body,
       estado: esUrgente ? EstadoTurno.ATENDIDO : EstadoTurno.PENDIENTE,
-      observaciones: esUrgente ? 'Ingreso por guardia médica' : '',
+      observaciones: observaciones || (esUrgente ? 'Ingreso por guardia médica' : ''),
     };
 
     if (esUrgente) console.log('🚨 ALERTA: registrado un turno de urgencia');
@@ -188,4 +192,84 @@ const marcarAtendido = async (req: Request<{ id: string }>, res: Response) => {
   }
 };
 
-export { getTurnos, getTurnoById , createTurno, updateTurno, deleteTurno, marcarAtendido };
+// Devuelve únicamente los turnos del paciente logueado.
+// Por defecto incluye los turnos futuros y los de los últimos 30 días.
+// Con ?historial=true devuelve todo el historial sin filtro de fecha.
+const getMisTurnos = async (
+  req: Request<unknown, unknown, unknown, { historial?: string }>,
+  res: Response
+) => {
+  try {
+    const usuario = (req as RequestAutenticado).usuario;
+
+    if (!usuario?.email) {
+      return respuestaEstandar(res, 401, false, 'No autorizado');
+    }
+
+    const paciente = await Paciente.findOne({ email: usuario.email.toLowerCase() });
+
+    if (!paciente) {
+      return respuestaEstandar(res, 404, false, 'No se encontró la ficha de paciente asociada a tu usuario');
+    }
+
+    const filtro: Record<string, unknown> = { paciente: paciente._id, activo: true };
+
+    if (req.query.historial !== 'true') {
+      const limite = new Date();
+      limite.setDate(limite.getDate() - 30);
+      limite.setHours(0, 0, 0, 0);
+      filtro.fecha = { $gte: limite };
+    }
+
+    const turnos = await Turno.find(filtro)
+      .populate('medico', 'nombre apellido')
+      .populate('especialidad', 'nombre')
+      .sort({ fecha: 1, hora: 1 });
+
+    return respuestaEstandar(res, 200, true, 'Turnos obtenidos exitosamente', turnos);
+  } catch (error: any) {
+    return respuestaEstandar(res, 500, false, 'Error al obtener los turnos', error.message);
+  }
+};
+
+// Devuelve el detalle de un turno propio junto con la consulta médica asociada (si existe)
+const getMiTurnoById = async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const usuario = (req as RequestAutenticado).usuario;
+
+    if (!usuario?.email) {
+      return respuestaEstandar(res, 401, false, 'No autorizado');
+    }
+
+    const paciente = await Paciente.findOne({ email: usuario.email.toLowerCase() });
+
+    if (!paciente) {
+      return respuestaEstandar(res, 404, false, 'No se encontró la ficha de paciente asociada a tu usuario');
+    }
+
+    const turno = await Turno.findOne({ _id: req.params.id, paciente: paciente._id })
+      .populate('medico', 'nombre apellido')
+      .populate('especialidad', 'nombre');
+
+    if (!turno) {
+      return respuestaEstandar(res, 404, false, 'Turno no encontrado');
+    }
+
+    const consulta = await ConsultaMedica.findOne({
+      turno: turno._id,
+      paciente: paciente._id,
+      activo: true,
+    })
+      .populate('medico', 'nombre apellido')
+      .select('motivo diagnostico tratamiento observaciones estado fecha medico');
+
+    return respuestaEstandar(res, 200, true, 'Turno obtenido exitosamente', {
+      turno,
+      consulta: consulta || null,
+    });
+  } catch (error: any) {
+    return respuestaEstandar(res, 400, false, 'Error al obtener el turno', error.message);
+  }
+};
+
+export { getTurnos, getTurnoById , createTurno, updateTurno, deleteTurno, marcarAtendido, getMisTurnos, getMiTurnoById };

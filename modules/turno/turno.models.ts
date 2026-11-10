@@ -34,6 +34,11 @@ const TurnoSchema = new Schema<ITurno>(
       default: EstadoTurno.PENDIENTE, // O PENDIENTE según tu enum
       required: true,
     },
+    observaciones: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     activo: {
       type: Boolean,
       default: true,
