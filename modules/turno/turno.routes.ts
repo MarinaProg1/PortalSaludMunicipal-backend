@@ -20,11 +20,11 @@ router.post(
   createTurno
 );
 
-router.get('/', getTurnos);
-router.get('/:id', getTurnoById);
-router.post('/', validarSchema(CreateTurnoSchema), verificarTurnoValido, createTurno);
-router.put('/:id', validarSchema(UpdateTurnoSchema), updateTurno);
-router.delete('/:id', deleteTurno);
-router.patch('/:id/atendido', marcarAtendido);
+router.get('/', autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO'), getTurnos);
+router.get('/:id', autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO'), getTurnoById);
+router.post('/', autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO'), validarSchema(CreateTurnoSchema), verificarTurnoValido, createTurno);
+router.put('/:id', autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO'), validarSchema(UpdateTurnoSchema), updateTurno);
+router.delete('/:id', autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO'), deleteTurno);
+router.patch('/:id/atendido', autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO'), marcarAtendido);
 
 export default router;

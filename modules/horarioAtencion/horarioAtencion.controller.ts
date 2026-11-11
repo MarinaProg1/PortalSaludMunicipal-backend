@@ -3,9 +3,9 @@ import { HorarioAtencion }  from "./horarioAtencion.models";
 import type { IHorarioAtencionDTO } from "./dtos/horarioAtencion.schema";
 import { respuestaEstandar } from "../../utils/respuestaEstandar";
 
-const getHorarioAtencion = async (req: Request<unknown, unknown, unknown, IHorarioAtencionDTO>, res: Response) => { 
+const getHorarioAtencion = async (req: Request, res: Response) => { 
    try{
-        const { medico, diaSemana } = req.query;
+        const { medico, diaSemana } = req.query as { medico?: string; diaSemana?: string };
         const filtro: Record<string, string> = {};
 
         if (medico) filtro.medico = medico;
@@ -57,12 +57,12 @@ const deleteHorarioAtencion = async (req: Request<{ id: string }>, res: Response
         const horarioBorrado = await HorarioAtencion.findByIdAndDelete(req.params.id);
 
         if (!horarioBorrado) {
-            return respuestaEstandar(res, 404, false, 'Paciente no encontrado');
+            return respuestaEstandar(res, 404, false, 'Horario de atención no encontrado');
         }
 
-        return respuestaEstandar(res, 200, true, 'Paciente eliminado correctamente', horarioBorrado);
+        return respuestaEstandar(res, 200, true, 'Horario de atención eliminado correctamente', horarioBorrado);
     } catch (error: any) {
-        return respuestaEstandar(res, 400, false, 'Error al eliminar el paciente', error.message);
+        return respuestaEstandar(res, 400, false, 'Error al eliminar el horario de atención', error.message);
     }
 };
 export { getHorarioAtencion, createHorarioAtencion, updateHorarioAtencion, deleteHorarioAtencion};
