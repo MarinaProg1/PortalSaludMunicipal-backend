@@ -30,6 +30,7 @@ export const CreateTurnoSchema = z.object({
             .regex(regexHora, 'Formato de hora inválido (HH:mm)'),
         
         estado: z.enum(EstadoTurno).optional().default(EstadoTurno.PENDIENTE),
+        observaciones: z.string().trim().max(500, 'Las observaciones no pueden superar los 500 caracteres').optional().default(''),
         activo: z.boolean().optional().default(true),
     }),
 }).refine((data) => {

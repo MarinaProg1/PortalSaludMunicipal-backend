@@ -68,8 +68,23 @@ export const registro = async (req: Request, res: Response, next: NextFunction) 
 export const cambiarPasswordPrimerLogin = async (req: Request<{ id: string }, unknown, ICambiarPasswordDTO>, res: Response) => {
     try {
 
-        const reqAuth = req as Request & { usuario?: { id: string } };
-        const usuarioId = reqAuth.usuario?.id;
+        const reqAuth = req as Request & { usuario?: { id: string }; headers?: { authorization?: string } };
+        let usuarioId = reqAuth.usuario?.id;
+        if (!usuarioId) {
+            const authHeader = req.headers.authorization || "";
+            const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+            if (token) {
+                try {
+                    const payload = jwt.verify(token, JWT_SECRET) as { id?: string };
+                    usuarioId = payload.id;
+                } catch {
+                    return respuestaEstandar(res, 401, false, 'Token invalido o expirado');
+                }
+            }
+        }
+        if (!usuarioId) {
+            return respuestaEstandar(res, 401, false, 'No autorizado');
+        }
         const { passwordActual, nuevaPassword } = req.body;
 
         const usuario = await Usuario.findById(usuarioId);

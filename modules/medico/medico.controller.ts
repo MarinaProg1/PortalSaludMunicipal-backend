@@ -156,4 +156,27 @@ const deleteMedico = async (req: Request<{ id: string }>, res: Response) => {
   }
 };
 
-export { getMedico, createMedico, updateMedico, deleteMedico };
+// Devuelve la ficha completa de un medico (con especialidades y obra social pobladas)
+const getMedicoById = async (req: Request<{ id: string }>, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return respuestaEstandar(res, 400, false, 'ID invalido');
+    }
+
+    const medico = await Medico.findById(id)
+      .populate('especialidades', 'nombre')
+      .populate('obraSocial', 'nombre');
+
+    if (!medico) {
+      return respuestaEstandar(res, 404, false, 'Medico no encontrado');
+    }
+
+    return respuestaEstandar(res, 200, true, 'Medico obtenido', medico);
+  } catch (error: any) {
+    return respuestaEstandar(res, 500, false, 'Error al obtener el medico', error.message);
+  }
+};
+
+export { getMedico, getMedicoById, createMedico, updateMedico, deleteMedico };

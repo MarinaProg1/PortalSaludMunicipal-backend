@@ -30,11 +30,13 @@ export const CrearPacienteSchema = z.object({
          telefono:TelefonoZodSchema,
 
          obraSocial: z.string()
-           .length(24, 'ID de Obra Social involido')
-           .optional().default('Sin obra social'),
+           .length(24, 'ID de Obra Social invalido')
+           .nullable()
+           .optional()
+           .default(null),
          numeroAfiliado: z.string().trim().optional().nullable().default(null),
 
-         activo: z.boolean()
+         activo: z.boolean().optional().default(true)
     })
 })
 
@@ -58,6 +60,7 @@ export const ActualizarPacienteSchema = z.object({
          direccion: DireccionZodSchema.optional(),
          telefono: TelefonoZodSchema.optional(),
          obraSocial: z.string().length(24, 'ID de Obra Social inválido').nullable().optional(),
+         numeroAfiliado: z.string().trim().nullable().optional(),
          activo: z.boolean().optional()
     })
 });

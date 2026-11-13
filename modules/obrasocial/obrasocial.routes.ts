@@ -8,13 +8,17 @@ import { Router } from 'express';
 import { listar, obtenerUno, crear, actualizar, eliminar } from './obrasocial.controller';
 import { crearObraSocialSchema, actualizarObraSocialSchema } from './dtos/obrasocial.schema';
 import { validarSchema } from '../../middlewares/validarDatos.middleware';
+import { autenticar, permitirRoles } from '../../middlewares/autenticar.middleware';
 
 const router = Router();
 
-router.get('/', listar);
-router.get('/:id', obtenerUno);
-router.post('/', validarSchema(crearObraSocialSchema), crear);
-router.put('/:id', validarSchema(actualizarObraSocialSchema), actualizar);
-router.delete('/:id', eliminar);
+const puedeLeer = [autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO')];
+const puedeAdministrar = [autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA')];
+
+router.get('/', ...puedeLeer, listar);
+router.get('/:id', ...puedeLeer, obtenerUno);
+router.post('/', ...puedeAdministrar, validarSchema(crearObraSocialSchema), crear);
+router.put('/:id', ...puedeAdministrar, validarSchema(actualizarObraSocialSchema), actualizar);
+router.delete('/:id', ...puedeAdministrar, eliminar);
 
 export default router;

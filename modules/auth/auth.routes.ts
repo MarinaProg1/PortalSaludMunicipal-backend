@@ -6,11 +6,12 @@ import { Router } from 'express';
 import { login, registro,cambiarPasswordPrimerLogin } from './auth.controller';
 import { validarSchema } from '../../middlewares/validarDatos.middleware';
 import { loginSchema, registroSchema, CambiarPasswordSchema } from './dtos/auth.schemas';
+import { autenticar } from '../../middlewares/autenticar.middleware';
 
 const router = Router();
 
 router.post('/login', validarSchema(loginSchema), login);
 router.post('/registro', validarSchema(registroSchema), registro);
-router.put('/cambiar-password',validarSchema(CambiarPasswordSchema ), cambiarPasswordPrimerLogin)
+router.put('/cambiar-password', autenticar, validarSchema(CambiarPasswordSchema), cambiarPasswordPrimerLogin)
 
 export default router;
