@@ -153,7 +153,6 @@ const updatePaciente = async (req: Request<{ id: string }, unknown, IActualizarP
 // 2. Endpoint Específico para Dirección, Teléfono y Email
 const updateContactoDireccion = async (req: Request<{ id: string }, unknown, IActualizarContactoDireccionDTO>, res: Response) => {
     try {
-        // Usamos $set de forma dinámica solo con los campos que llegaron en el body
         const pacienteActualizado = await Paciente.findByIdAndUpdate(
             req.params.id,
             { $set: req.body },
@@ -187,5 +186,7 @@ const deletePaciente = async (req: Request<{ id: string }>, res: Response) => {
         return respuestaEstandar(res, 400, false, 'Error al eliminar el paciente', error.message);
     }
 };
+
+
 
 export { getPacientes, getPacienteById, createPaciente, deletePaciente, updatePaciente, updateContactoDireccion };

@@ -22,7 +22,7 @@ import medicoRoutes from './modules/medico/medico.routes';
 import especialidadRoutes from './modules/especialidad/especialidad.routes';
 import historialMedicoRoutes from './modules/historialMedico/historialMedico.routes';
 import horarioAtencionRoutes from './modules/horarioAtencion/horarioAtencion.routes';
-
+import excepcionAgendaRoutes from './modules/excepcionAgenda/excepcionAgenda.routes';
 import iaRoutes from './modules/ia/ia.routes';
 
 const app: Application = express();
@@ -46,6 +46,7 @@ app.use('/api/v1/especialidades', especialidadRoutes);
 app.use('/api/v1/historiales', historialMedicoRoutes);
 app.use('/api/v1/horarioAtencion', horarioAtencionRoutes)
 app.use('/api/v1/ia', iaRoutes);
+app.use('/api/v1/excepciones', excepcionAgendaRoutes);
 app.use(errorHandlerMiddleware);
 
 const PORT: string | number = process.env.PORT || 3000;

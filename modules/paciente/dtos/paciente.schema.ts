@@ -1,16 +1,28 @@
 import { z } from 'zod';
 import {DireccionZodSchema} from '../../../utils/direccion.interfaces';
 import { TelefonoZodSchema } from '../../../utils/telefono.interfaces';
+import { pacienteSexo } from '../enum/pacienteSexo.enum';
 
 
 export const CrearPacienteSchema = z.object({
     body: z.object({
-         nombre: z.string(),
-         apellido: z.string(),
-         dni: z.string(),
-         sexo:z.string(),
+         nombre: z.string() 
+                        .trim()
+                        .min(2, "Mínimo 2 caracteres")
+                        .max(50)
+                        .transform(v => v.toUpperCase()),
+         apellido: z.string()
+                        .trim()
+                        .min(2, "Mínimo 2 caracteres")
+                        .max(50)
+                        .transform(v => v.toUpperCase()),
+         dni: z.string()
+                        .trim()
+                        .min(2, "Mínimo 2 caracteres")
+                        .max(50)
+                        .transform(v => v.toUpperCase()),
+         sexo:z.enum(pacienteSexo, {error: "Tipo de sexo no válido"}),
          email:z.string(),
-         
          user: z.string().min(3, 'El nombre de usuario debe tener al menos 3 caracteres').optional(),
          password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional(),
 

@@ -1,13 +1,11 @@
 import { Schema, model, Document } from 'mongoose';
 import type { ITurno } from './types/turno.interface';
 import { EstadoTurno } from './enum/estadoTurno.enum';
-// tenemos que ver que por pacientes y especialidad solo se pueda crear un turno diario.
 
 const TurnoSchema = new Schema<ITurno>(
   {
     paciente: {
-      type: Schema.Types.ObjectId,
-      ref: 'Paciente',
+      type: Schema.Types.Mixed, // Permite guardar tanto un ObjectId (normal) como un String (DNI / Nombre en urgencias)
       required: true,
     },
     medico: {
@@ -27,11 +25,11 @@ const TurnoSchema = new Schema<ITurno>(
     hora: {
       type: String,
       required: true,
-    }, // Formato "HH:mm" (ej: "08:30")
+    }, 
     estado: {
       type: String,
       enum: Object.values(EstadoTurno),
-      default: EstadoTurno.PENDIENTE, // O PENDIENTE según tu enum
+      default: EstadoTurno.PENDIENTE,
       required: true,
     },
     activo: {
@@ -44,8 +42,14 @@ const TurnoSchema = new Schema<ITurno>(
   }
 );
 
-// Índice compuesto para evitar que dos pacientes reserven el mismo turno exacto
-TurnoSchema.index({ medico: 1, fecha: 1, hora: 1 }, { unique: true });
+// Índice parcial: solo aplicamos unicidad estricta para turnos normales donde paciente es un ObjectId
+TurnoSchema.index(
+  { paciente: 1, especialidad: 1, fecha: 1 }, 
+  { 
+    unique: true, 
+    partialFilterExpression: { paciente: { $type: "objectId" } } 
+  }
+);
 
 TurnoSchema.set('toJSON', {
   transform: (documento: Document, turnoRetorno: Record<string, any>) => {

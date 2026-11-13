@@ -2,26 +2,25 @@ import type {Request, Response} from "express";
 import { HorarioAtencion }  from "./horarioAtencion.models";
 import type { IHorarioAtencionDTO } from "./dtos/horarioAtencion.schema";
 import { respuestaEstandar } from "../../utils/respuestaEstandar";
+import { DiasSemana } from "./enum/diasSemana.enum";
 
-const getHorarioAtencion = async (req: Request<unknown, unknown, unknown, IHorarioAtencionDTO>, res: Response) => { 
-   try{
+const getHorarioAtencion = async (req: Request, res: Response) => { 
+   try {
         const { medico, diaSemana } = req.query;
-        const filtro: Record<string, string> = {};
+        const filtro: Record<string, any> = {};
 
         if (medico) filtro.medico = medico;
         if (diaSemana) filtro.diaSemana = diaSemana;
 
-        const horario = await HorarioAtencion.find(filtro);
+        const horario = await HorarioAtencion.find(filtro)
+            .populate('medico') 
 
         return respuestaEstandar(res, 200, true, 'Horario de atención obtenido correctamente', horario);    
 
-
-   }catch(error: any){
-         return respuestaEstandar(res, 500, false, 'Error al obtener el horario de atención', error.message);   
+   } catch(error: any) {
+        return respuestaEstandar(res, 500, false, 'Error al obtener el horario de atención', error.message);   
    }
-
 };
-
 const createHorarioAtencion = async (req: Request<unknown, unknown, IHorarioAtencionDTO>, res: Response) => {
     try{
          

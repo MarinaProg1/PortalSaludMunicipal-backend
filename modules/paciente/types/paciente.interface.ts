@@ -1,6 +1,7 @@
 import { Document, Types } from "mongoose";
 import type {IDireccion} from "../../../utils/direccion.interfaces";
 import type {ITelefono } from "../../../utils/telefono.interfaces";
+import { pacienteSexo } from "../enum/pacienteSexo.enum";
 
 
 export interface IPaciente extends Document{
@@ -8,7 +9,7 @@ export interface IPaciente extends Document{
     nombre: string,
     apellido: string,
     dni:string,
-    sexo: string,
+    sexo: pacienteSexo,
     email: string,
     direccion: IDireccion,
     telefono:ITelefono,

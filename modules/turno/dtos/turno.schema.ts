@@ -3,22 +3,45 @@ import { EstadoTurno } from '../enum/estadoTurno.enum';
 
 const regexHora = /^([01]\d|2[0-3]):[0-5]\d$/;
 const regexFecha = /^\d{4}-\d{2}-\d{2}$/;
+const mongoIdRegex = /^[0-9a-fA-F]{24}$/;
 
 export const CreateTurnoSchema = z.object({
+    query: z.object({
+        urgencia: z.enum(['true', 'false']).optional(),
+    }).optional(),
     body: z.object({
-        medico:z.string().length(24, 'ID de Médico inválido').optional().default("Ninguna"),
-        paciente:z.string().length(24, 'ID de Paciente inválido').optional().default("Ninguna"),
-        especialidad:z.string().length(24, 'ID de Especialidad inválido').optional().default("Ninguna"),
+        medico: z
+            .string({ message: 'El ID del médico es obligatorio' })
+            .regex(mongoIdRegex, 'ID de Médico inválido'),
+        
+        paciente: z.string({ message: 'El paciente es obligatorio' }),
+        
+        especialidad: z
+            .string({ message: 'El ID de la especialidad es obligatorio' })
+            .regex(mongoIdRegex, 'ID de Especialidad inválido'),
+        
         fecha: z
             .string({ message: 'La fecha es obligatoria' })
-            .regex(regexFecha, 'La fecha debe tener el formato YYYY-MM-DD (ej: 2026-10-12)')
+            .regex(regexFecha, 'La fecha debe tener el formato YYYY-MM-DD')
             .transform((val) => new Date(val)),
+        
         hora: z
             .string({ message: 'La hora es obligatoria' })
-            .regex(regexHora, 'La hora debe tener el formato HH:mm válido (ej: 08:30)'),
+            .regex(regexHora, 'Formato de hora inválido (HH:mm)'),
+        
         estado: z.enum(EstadoTurno).optional().default(EstadoTurno.PENDIENTE),
         activo: z.boolean().optional().default(true),
     }),
+}).refine((data) => {
+    const esUrgente = data.query?.urgencia === 'true';
+    if (!esUrgente) {
+        // Para turnos normales, validamos estrictamente que el paciente sea un ObjectId válido de Mongo
+        return mongoIdRegex.test(data.body.paciente);
+    }
+    return true; // Si es urgencia, se permite texto libre (ej: "DNI 40123456 - Juan")
+}, {
+    message: 'Para turnos normales se requiere un ID de paciente válido.',
+    path: ['body', 'paciente'],
 });
 
 export const queryUrgenciaSchema = z.object({
@@ -26,14 +49,12 @@ export const queryUrgenciaSchema = z.object({
         urgencia: z.enum(['true', 'false']).optional()
     })
 });
+
 export const UpdateTurnoSchema = z.object({
     body: CreateTurnoSchema.shape.body.partial(),
 });
 
-
-
-
-
+// Tipos inferidos automáticamente para usar en controladores y servicios
 export type ICreateTurnoDTO = z.infer<typeof CreateTurnoSchema>['body'];
 export type IUpdateTurnoDTO = z.infer<typeof UpdateTurnoSchema>['body'];
-export type IQueryUrgencia = z.infer<typeof queryUrgenciaSchema>['query']
+export type IQueryUrgencia = z.infer<typeof queryUrgenciaSchema>['query'];

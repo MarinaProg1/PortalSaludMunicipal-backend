@@ -28,7 +28,6 @@ const getMedico = async (req: Request, res: Response) => {
     return respuestaEstandar(res, 500, false, 'Error al obtener Médicos', error.message);
   }
 };
-
 const createMedico = async (req: Request<unknown, unknown, IMedicoDTO & { password?: string; user?: string }>, res: Response) => {
     const { numeroMatricula, dni, email, user: nombreUsuario, password, ...datosMedico } = req.body;
 

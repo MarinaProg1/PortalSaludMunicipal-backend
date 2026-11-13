@@ -1,6 +1,7 @@
 import { Document, Schema, model } from "mongoose";
 import type { IHorarioAtencion } from "./types/horarioAtencion.interfaces";
 import { DiasSemana } from "./enum/diasSemana.enum";
+import "../medico/medico.models";
 
 export const horaAMinutos = (hora: string): number => {
   const [h = 0, m = 0] = hora.split(':').map(Number);

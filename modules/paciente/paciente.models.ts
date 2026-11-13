@@ -2,6 +2,7 @@ import { Document,Schema, model } from "mongoose";
 import type {IPaciente} from './types/paciente.interface';
 import { DireccionSchema } from "../../utils/direccion.interfaces";
 import { TelefonoSchema } from "../../utils/telefono.interfaces";
+import { pacienteSexo } from "./enum/pacienteSexo.enum";
 // falta fecha de nacimiento y correo electronico opcional 
 const pacienteSchema = new Schema<IPaciente>({
     nombre: {
@@ -22,7 +23,8 @@ const pacienteSchema = new Schema<IPaciente>({
     },
     sexo: {
         type: String,
-        required: [true, 'El nombre es obligatorio'],
+        enum: Object.values(pacienteSexo),
+        required: [true, 'El sexo es obligatorio'],
         uppercase: true,
     },
    
@@ -39,7 +41,7 @@ const pacienteSchema = new Schema<IPaciente>({
         type: TelefonoSchema
     },
     obraSocial:{
-        type: Schema.Types.ObjectId, //si no tiene obra social que sea null , tener una opcion que sea otras.
+        type: Schema.Types.ObjectId, 
         ref: 'ObraSocial',
         default: null,
     },
