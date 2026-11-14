@@ -30,9 +30,13 @@ const UsuarioSchema = new Schema<IUsuario>(
             default: Rol.RECEPCIONISTA,
         },
         debeCambiarPassword: {
-    type: Boolean,
-    default: true, 
-},
+            type: Boolean,
+            default: true,
+        },
+        tokenVersion: {
+            type: Number,
+            default: 0,
+        },
         activo: {
             type: Boolean,
             default: true,
@@ -49,6 +53,7 @@ UsuarioSchema.set('toJSON', {
         delete usuarioRetorno._id;
         delete usuarioRetorno.__v;
         delete usuarioRetorno.password;
+        delete usuarioRetorno.tokenVersion;
     },
 });
 
