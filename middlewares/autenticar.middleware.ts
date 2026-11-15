@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/env';
 import Paciente from '../modules/paciente/paciente.models';
+import Medico from '../modules/medico/medico.models';
 import { Usuario } from '../modules/auth/usuario.models';
 import { respuestaEstandar } from '../utils/respuestaEstandar';
 
@@ -14,6 +15,10 @@ export interface UsuarioToken {
 }
 
 export type RequestAutenticado = Request & { usuario?: UsuarioToken };
+
+// El JWT guarda el id del Usuario, pero los turnos/consultas apuntan a la ficha
+// Medico. Este tipo expone el id de esa ficha ya resuelta.
+export type RequestMedico = RequestAutenticado & { medicoId?: string };
 
 const RUTA_CAMBIO_PASSWORD = '/auth/cambiar-password';
 const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
@@ -83,6 +88,50 @@ export const permitirRoles = (...roles: string[]) => {
 
     return next();
   };
+};
+
+// Resuelve la ficha de Medico a partir del email del usuario logueado.
+// Solo interviene para el rol MEDICO; cualquier otro rol pasa sin cambios.
+// Debe usarse despues de autenticar() y permitirRoles().
+export const resolverMedicoAutenticado = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const usuario = (req as RequestAutenticado).usuario;
+
+    if (!usuario) {
+      return respuestaEstandar(res, 401, false, 'No autorizado');
+    }
+
+    if ((usuario.rol || '').toUpperCase() !== 'MEDICO') {
+      return next();
+    }
+
+    if (!usuario.email) {
+      return respuestaEstandar(res, 401, false, 'No autorizado');
+    }
+
+    const medico = await Medico.findOne({
+      email: usuario.email.toLowerCase(),
+      activo: true,
+    }).select('_id');
+
+    if (!medico) {
+      return respuestaEstandar(
+        res,
+        404,
+        false,
+        'No se encontro la ficha de medico asociada a tu usuario'
+      );
+    }
+
+    (req as RequestMedico).medicoId = String(medico._id);
+    return next();
+  } catch (error) {
+    return next(error);
+  }
 };
 
 // Busca la ficha del paciente asociada al usuario logueado y la asigna al body.

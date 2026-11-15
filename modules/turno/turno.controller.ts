@@ -12,6 +12,7 @@ import { IExcepcionAgenda } from '../excepcionAgenda/types/excepcionAgenda.inter
 import Paciente from '../paciente/paciente.models';
 import { ConsultaMedica } from '../consultamedica/consultamedica.models';
 import type { RequestAutenticado } from '../../middlewares/autenticar.middleware';
+import { obtenerMedicoId } from '../../utils/medicoScope';
 
 
 const DIAS_MAPA: Record<number, DiasSemana> = {
@@ -31,6 +32,26 @@ const obtenerFechaHoyStr = (): string => {
   const dia = String(hoyObj.getDate()).padStart(2, '0');
   return `${anio}-${mes}-${dia}`;
 };
+
+// Un turno pendiente/confirmado cuya fecha y hora ya pasaron se muestra como vencido.
+// Se usa la fecha ISO (UTC) porque los turnos se guardan a las 00:00Z del dia elegido.
+const estaVencido = (turno: { fecha: Date | string; hora?: string; estado?: string }): boolean => {
+  const estado = String(turno.estado || '').toLowerCase();
+  if (estado !== EstadoTurno.PENDIENTE && estado !== EstadoTurno.CONFIRMADO) {
+    return false;
+  }
+
+  const fechaTurnoStr = new Date(turno.fecha).toISOString().slice(0, 10);
+  const hoyStr = obtenerFechaHoyStr();
+
+  if (fechaTurnoStr < hoyStr) return true;
+  if (fechaTurnoStr > hoyStr) return false;
+
+  const ahora = new Date();
+  const horaActual = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+  return String(turno.hora || '') < horaActual;
+};
+
 // Función auxiliar para generar todos los horarios posibles de un bloque
 const generarSlots = (horaInicio: string, horaFin: string, duracionMinutos: number): string[] => {
   const slots: string[] = [];
@@ -50,11 +71,17 @@ const generarSlots = (horaInicio: string, horaFin: string, duracionMinutos: numb
 };
 
 const getTurnos = async (
-  req: Request<unknown, unknown, unknown, { id?: string; especialidad?: string; medico?: string; fecha?: string }>,
+  req: Request<
+    unknown,
+    unknown,
+    unknown,
+    { id?: string; especialidad?: string; medico?: string; fecha?: string; paciente?: string; bandeja?: string }
+  >,
   res: Response
 ) => {
   try {
-    const { id, especialidad, medico, fecha } = req.query;
+    const { id, especialidad, medico, fecha, paciente, bandeja } = req.query;
+    const medicoId = obtenerMedicoId(req);
 
     const filtro: Record<string, any> = { activo: true };
 
@@ -66,8 +93,15 @@ const getTurnos = async (
       filtro.especialidad = new Types.ObjectId(especialidad);
     }
 
-    if (medico) {
+    // Un medico autenticado nunca puede pedir turnos de otro medico.
+    if (medicoId) {
+      filtro.medico = new Types.ObjectId(medicoId);
+    } else if (medico) {
       filtro.medico = new Types.ObjectId(medico);
+    }
+
+    if (paciente) {
+      filtro.paciente = new Types.ObjectId(paciente);
     }
 
     if (fecha) {
@@ -76,9 +110,17 @@ const getTurnos = async (
       filtro.fecha = { $gte: inicioDia, $lte: finDia };
     }
 
+    // Bandejas del medico: por atender = pendiente + confirmado;
+    // atendidos = atendido + finalizado (finalizado tambien cierra la atencion).
+    if (bandeja === 'por-atender') {
+      filtro.estado = { $in: [EstadoTurno.PENDIENTE, EstadoTurno.CONFIRMADO] };
+    } else if (bandeja === 'atendidos') {
+      filtro.estado = { $in: [EstadoTurno.ATENDIDO, EstadoTurno.FINALIZADO] };
+    }
+
     const pacientePopulate = {
       path: 'paciente',
-      select: 'nombre apellido obraSocial',
+      select: 'nombre apellido dni telefono obraSocial',
       populate: {
         path: 'obraSocial',
         select: 'razonSocial' 
@@ -89,9 +131,14 @@ const getTurnos = async (
       .populate(pacientePopulate)
       .populate('medico', 'nombre apellido')
       .populate('especialidad', 'nombre')
-      .sort({ fecha: 1, hora: 1 });
+      .sort(bandeja === 'atendidos' ? { fecha: -1, hora: -1 } : { fecha: 1, hora: 1 });
 
-    return respuestaEstandar(res, 200, true, 'Turnos obtenidos exitosamente', turnos);
+    const turnosConVencido = turnos.map((turno) => ({
+      ...turno.toObject(),
+      vencido: estaVencido(turno),
+    }));
+
+    return respuestaEstandar(res, 200, true, 'Turnos obtenidos exitosamente', turnosConVencido);
   } catch (error: any) {
     return respuestaEstandar(res, 500, false, 'Error interno del servidor', error.message);
   }
@@ -100,17 +147,23 @@ const getTurnos = async (
 const getTurnoById = async (req: Request<{ id: string }>, res: Response) => {
   try {
     const { id } = req.params;
+    const medicoId = obtenerMedicoId(req);
 
     const pacientePopulate = {
       path: 'paciente',
-      select: 'nombre apellido obraSocial',
+      select: 'nombre apellido dni telefono obraSocial',
       populate: {
         path: 'obraSocial',
         select: 'razonSocial'
       }
     };
 
-    const turno = await Turno.findById(id)
+    const filtro: Record<string, any> = { _id: id };
+    if (medicoId) {
+      filtro.medico = new Types.ObjectId(medicoId);
+    }
+
+    const turno = await Turno.findOne(filtro)
       .populate(pacientePopulate)
       .populate('medico', 'nombre apellido')
       .populate('especialidad', 'nombre');
@@ -119,7 +172,10 @@ const getTurnoById = async (req: Request<{ id: string }>, res: Response) => {
       return respuestaEstandar(res, 404, false, `Turno no encontrado con ID ${id}`);
     }
 
-    return respuestaEstandar(res, 200, true, 'Turno obtenido exitosamente', turno);
+    return respuestaEstandar(res, 200, true, 'Turno obtenido exitosamente', {
+      ...turno.toObject(),
+      vencido: estaVencido(turno),
+    });
   } catch (error: any) {
     return respuestaEstandar(res, 400, false, 'ID con formato inválido', error.message);
   }
@@ -500,38 +556,46 @@ const deleteTurno = async (req: Request<{ id: string }>, res: Response) => {
 const marcarAtendido = async (req: Request<{ id: string }>, res: Response) => {
   try {
     const { id } = req.params;
+    const medicoId = obtenerMedicoId(req);
     const turno = await Turno.findById(id);
 
     if (!turno) {
       return respuestaEstandar(res, 404, false, `Turno no encontrado con ID ${id}`);
     }
 
-    if (turno.estado === EstadoTurno.ATENDIDO) {
-      return respuestaEstandar(res, 400, false, 'Este turno ya se encuentra marcado como atendido y no puede modificarse.');
+    // Un medico solo puede cerrar sus propios turnos.
+    if (medicoId && String(turno.medico) !== medicoId) {
+      return respuestaEstandar(res, 403, false, 'El turno no pertenece al medico autenticado');
     }
 
-    const fechaTurnoIso = new Date(turno.fecha).toISOString();
-    const fechaTurnoStr = fechaTurnoIso.split('T')[0];
+    if (turno.estado === EstadoTurno.ATENDIDO || turno.estado === EstadoTurno.FINALIZADO) {
+      return respuestaEstandar(res, 400, false, 'Este turno ya se encuentra atendido y no puede modificarse.');
+    }
 
-    const hoyObj = new Date();
-    const anio = hoyObj.getFullYear();
-    const mes = String(hoyObj.getMonth() + 1).padStart(2, '0');
-    const dia = String(hoyObj.getDate()).padStart(2, '0');
-    const hoyStr = `${anio}-${mes}-${dia}`;
+    if (turno.estado === EstadoTurno.CANCELADO) {
+      return respuestaEstandar(res, 400, false, 'No se puede atender un turno cancelado.');
+    }
 
-    if (fechaTurnoStr !== hoyStr) {
+    const fechaTurnoStr = new Date(turno.fecha).toISOString().slice(0, 10);
+    const hoyStr = obtenerFechaHoyStr();
+
+    // Se permiten turnos de hoy y tambien vencidos (para poder cerrarlos).
+    if (fechaTurnoStr > hoyStr) {
       return respuestaEstandar(
         res, 
         400, 
         false, 
-        'Acción no permitida: Solo se pueden atender turnos programados para el día de la fecha.'
+        'Acción no permitida: Solo se pueden atender turnos programados para hoy o fechas anteriores.'
       );
     }
 
     turno.estado = EstadoTurno.ATENDIDO;
     await turno.save();
 
-    return respuestaEstandar(res, 200, true, 'Turno marcado como atendido exitosamente', turno);
+    return respuestaEstandar(res, 200, true, 'Turno marcado como atendido exitosamente', {
+      ...turno.toObject(),
+      vencido: false,
+    });
     
   } catch (error: any) {
     return respuestaEstandar(res, 500, false, 'Error de servidor', error.message);
@@ -556,7 +620,7 @@ const getTurnosPendientesHistoricos = async (req: Request, res: Response) => {
       fecha: { $lte: finHoy },
       activo: true,
       estado: { 
-        $nin: [EstadoTurno.ATENDIDO, EstadoTurno.CANCELADO] 
+        $nin: [EstadoTurno.ATENDIDO, EstadoTurno.FINALIZADO, EstadoTurno.CANCELADO] 
       }
     })
       .populate(pacientePopulate)

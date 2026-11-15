@@ -12,7 +12,8 @@ export const crearConsultaMedicaSchema = z.object({
         paciente: z.string({ error: 'El paciente es obligatorio' })
             .regex(ObjectIdRegex, 'El paciente debe ser un ObjectId valido'),
         medico: z.string({ error: 'El medico es obligatorio' })
-            .regex(ObjectIdRegex, 'El medico debe ser un ObjectId valido'),
+            .regex(ObjectIdRegex, 'El medico debe ser un ObjectId valido')
+            .optional(),
         turno: z.string({ error: 'El turno debe ser un ObjectId' })
             .regex(ObjectIdRegex, 'El turno debe ser un ObjectId valido')
             .optional(),

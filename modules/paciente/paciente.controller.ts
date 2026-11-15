@@ -9,17 +9,26 @@ import { Rol } from "../auth/enum/rol.enum";
 import type { RequestAutenticado } from '../../middlewares/autenticar.middleware';
 import { Turno } from "../turno/turno.models";
 import { ConsultaMedica } from "../consultamedica/consultamedica.models";
+import { obtenerMedicoId, idsPacientesDelMedico, pacientePerteneceAlMedico } from '../../utils/medicoScope';
 
 const getPacientes = async (req: Request<unknown, unknown, unknown, IQueryPacientes>, res: Response) => {
     try {
         const { obraSocial, dni } = req.query;
-        const filtro: Record<string, string> = {};
+        const medicoId = obtenerMedicoId(req);
+        const filtro: Record<string, any> = {};
 
         if (obraSocial) filtro.obraSocial = obraSocial;
 
         if (dni) filtro.dni = dni;
 
-        const pacientes = await Paciente.find(filtro).populate('obraSocial');
+        // Un medico solo lista pacientes con los que tiene o tuvo turnos.
+        if (medicoId) {
+            filtro._id = { $in: await idsPacientesDelMedico(medicoId) };
+        }
+
+        const pacientes = await Paciente.find(filtro)
+            .populate('obraSocial')
+            .sort({ apellido: 1, nombre: 1 });
 
         return respuestaEstandar(res, 200, true, 'Pacientes obtenidos exitosamente', pacientes);
     } catch (error: any) {
@@ -50,6 +59,12 @@ const getMiPerfil = async (req: Request, res: Response) => {
 
 const getPacienteById = async (req: Request<{ id: string }>, res: Response) => {
     try {
+        const medicoId = obtenerMedicoId(req);
+
+        if (medicoId && !(await pacientePerteneceAlMedico(medicoId, req.params.id))) {
+            return respuestaEstandar(res, 403, false, 'No tenés acceso a la ficha de este paciente');
+        }
+
         const paciente = await Paciente.findById(req.params.id).populate('obraSocial');
 
         if (!paciente) {
@@ -283,9 +298,14 @@ const getTurnosPaciente = async (
 ) => {
     try {
         const { id } = req.params;
+        const medicoId = obtenerMedicoId(req);
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return respuestaEstandar(res, 400, false, 'El id del paciente no es valido');
+        }
+
+        if (medicoId && !(await pacientePerteneceAlMedico(medicoId, id))) {
+            return respuestaEstandar(res, 403, false, 'No tenés acceso al historial de este paciente');
         }
 
         const paciente = await Paciente.findById(id);
@@ -296,7 +316,10 @@ const getTurnosPaciente = async (
 
         const filtro: Record<string, unknown> = { paciente: paciente._id, activo: true };
 
-        if (req.query.historial !== 'true') {
+        // El medico ve el historial clinico completo del paciente.
+        const verHistorialCompleto = req.query.historial === 'true' || Boolean(medicoId);
+
+        if (!verHistorialCompleto) {
             const limite = new Date();
             limite.setDate(limite.getDate() - 30);
             limite.setHours(0, 0, 0, 0);

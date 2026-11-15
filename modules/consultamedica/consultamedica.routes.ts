@@ -7,12 +7,12 @@ import { Router } from 'express';
 import { listar, obtenerUna, crear, actualizar, eliminar } from './consultamedica.controller';
 import { crearConsultaMedicaSchema, actualizarConsultaMedicaSchema } from './dtos/consultamedica.schema';
 import { validarSchema } from '../../middlewares/validarDatos.middleware';
-import { autenticar, permitirRoles } from '../../middlewares/autenticar.middleware';
+import { autenticar, permitirRoles, resolverMedicoAutenticado } from '../../middlewares/autenticar.middleware';
 
 const router = Router();
 
-const puedeLeer = [autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO')];
-const puedeAdministrar = [autenticar, permitirRoles('ADMIN', 'MEDICO')];
+const puedeLeer = [autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO'), resolverMedicoAutenticado];
+const puedeAdministrar = [autenticar, permitirRoles('ADMIN', 'MEDICO'), resolverMedicoAutenticado];
 
 router.get('/', ...puedeLeer, listar);
 router.get('/:id', ...puedeLeer, obtenerUna);

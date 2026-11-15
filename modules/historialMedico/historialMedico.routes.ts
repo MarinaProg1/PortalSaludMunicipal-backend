@@ -1,12 +1,12 @@
 import { Router } from "express";
 import { getHistorialMedico, getHistorialByPaciente, createHistorialMedico, updateHistorialMedico, deleteHistorialMedico, agregarAlergia, agregarMedicacion , agregarEnfermedadCronica} from "./historialMedico.controller";
 import { validarSchema } from '../../middlewares/validarDatos.middleware';
-import { autenticar, permitirRoles } from '../../middlewares/autenticar.middleware';
+import { autenticar, permitirRoles, resolverMedicoAutenticado } from '../../middlewares/autenticar.middleware';
 import { agregarAlergiaSchema, agregarMedicacionSchema, agregarEnfermedadCronicaSchema } from "./dtos/historialMedico.schema";
 const router = Router();
 
-const puedeLeer = [autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO')];
-const puedeAdministrar = [autenticar, permitirRoles('ADMIN', 'MEDICO')];
+const puedeLeer = [autenticar, permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO'), resolverMedicoAutenticado];
+const puedeAdministrar = [autenticar, permitirRoles('ADMIN', 'MEDICO'), resolverMedicoAutenticado];
 
 router.get('/', ...puedeLeer, getHistorialMedico);
 router.get('/paciente/:pacienteId', ...puedeLeer, getHistorialByPaciente);  
