@@ -58,7 +58,10 @@ export const autenticar = async (req: Request, res: Response, next: NextFunction
       return respuestaEstandar(res, 401, false, 'Sesion invalida, volve a iniciar sesion');
     }
 
-    if (usuario.debeCambiarPassword && !req.originalUrl.includes(RUTA_CAMBIO_PASSWORD)) {
+    // Se compara SOLO el path (sin query string): usar originalUrl permitiria
+    // saltear el bloqueo agregando algo como ?x=/auth/cambiar-password.
+    const rutaActual = `${req.baseUrl}${req.path}`;
+    if (usuario.debeCambiarPassword && !rutaActual.endsWith(RUTA_CAMBIO_PASSWORD)) {
       return respuestaEstandar(res, 403, false, 'Debe cambiar la contraseña antes de continuar', {
         code: 'DEBE_CAMBIAR_PASSWORD',
       });
