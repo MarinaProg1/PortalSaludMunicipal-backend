@@ -47,6 +47,14 @@ const TurnoSchema = new Schema<ITurno>(
   }
 );
 
+// Normalizamos la fecha en UTC a medianoche (00:00:00.000Z) para evitar desfases horarios
+TurnoSchema.pre('save', function (this: ITurno & Document) {
+  if (this.fecha) {
+    const fechaIso = this.fecha.toISOString().split('T')[0];
+    this.fecha = new Date(`${fechaIso}T00:00:00.000Z`);
+  }
+});
+
 // Índice parcial: solo aplicamos unicidad estricta para turnos normales donde paciente es un ObjectId
 TurnoSchema.index(
   { paciente: 1, especialidad: 1, fecha: 1 }, 

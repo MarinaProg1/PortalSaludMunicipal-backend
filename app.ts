@@ -24,6 +24,7 @@ import historialMedicoRoutes from './modules/historialMedico/historialMedico.rou
 import horarioAtencionRoutes from './modules/horarioAtencion/horarioAtencion.routes';
 import excepcionAgendaRoutes from './modules/excepcionAgenda/excepcionAgenda.routes';
 import iaRoutes from './modules/ia/ia.routes';
+import usuarioRoutes from './modules/auth/usuario.routes';
 
 const app: Application = express();
 
@@ -47,6 +48,7 @@ app.use('/api/v1/historiales', historialMedicoRoutes);
 app.use('/api/v1/horarioAtencion', horarioAtencionRoutes)
 app.use('/api/v1/ia', iaRoutes);
 app.use('/api/v1/excepciones', excepcionAgendaRoutes);
+app.use('/api/v1/usuarios', usuarioRoutes)
 app.use(errorHandlerMiddleware);
 
 const PORT: string | number = process.env.PORT || 3000;

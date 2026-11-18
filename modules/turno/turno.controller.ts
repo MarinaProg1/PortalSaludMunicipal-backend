@@ -50,11 +50,11 @@ const generarSlots = (horaInicio: string, horaFin: string, duracionMinutos: numb
 };
 
 const getTurnos = async (
-  req: Request<unknown, unknown, unknown, { id?: string; especialidad?: string; medico?: string; fecha?: string }>,
+  req: Request<unknown, unknown, unknown, { id?: string; especialidad?: string; medico?: string; fecha?: string; historico?: string }>,
   res: Response
 ) => {
   try {
-    const { id, especialidad, medico, fecha } = req.query;
+    const { id, especialidad, medico, fecha, historico } = req.query;
 
     const filtro: Record<string, any> = { activo: true };
 
@@ -70,11 +70,15 @@ const getTurnos = async (
       filtro.medico = new Types.ObjectId(medico);
     }
 
-    if (fecha) {
-      const inicioDia = new Date(`${fecha}T00:00:00.000Z`);
-      const finDia = new Date(`${fecha}T23:59:59.999Z`);
-      filtro.fecha = { $gte: inicioDia, $lte: finDia };
-    }
+if (fecha) {
+  const inicioDia = new Date(`${fecha}T00:00:00.000Z`);
+  const finDia = new Date(`${fecha}T23:59:59.999Z`);
+  filtro.fecha = { $gte: inicioDia, $lte: finDia };
+} else if (historico !== 'true') {
+  const hoyStr = obtenerFechaHoyStr();
+  const inicioHoy = new Date(`${hoyStr}T00:00:00.000Z`);
+  filtro.fecha = { $gte: inicioHoy };
+}
 
     const pacientePopulate = {
       path: 'paciente',
@@ -153,7 +157,6 @@ const getTurnosDisponibles = async (req: Request, res: Response) => {
     const inicioDia = new Date(`${fechaTurnoStr}T00:00:00.000Z`);
     const finDia = new Date(`${fechaTurnoStr}T23:59:59.999Z`);
 
-    // Obtenemos el nombre del día de la semana para calcular slots base si hace falta
     const fechaObj = new Date(`${fechaTurnoStr}T00:00:00Z`);
     const diaNombre: DiasSemana | undefined = DIAS_MAPA[fechaObj.getUTCDay()];
 
@@ -161,7 +164,6 @@ const getTurnosDisponibles = async (req: Request, res: Response) => {
       return respuestaEstandar(res, 400, false, 'La fecha proporcionada no es válida', null);
     }
 
-    // 1. Verificar excepciones de agenda
     const excepcionDia = await ExcepcionAgenda.findOne<IExcepcionAgenda>({
       medico,
       fecha: { $gte: inicioDia, $lte: finDia },
@@ -184,7 +186,6 @@ const getTurnosDisponibles = async (req: Request, res: Response) => {
         todosLosSlots = generarSlots(excepcionDia.horaInicio, excepcionDia.horaFin, duracionTurno);
       }
     } else {
-      // Si no hay excepción, cargamos los horarios de atención habituales de ese día
       const horariosAtencion = await HorarioAtencion.find({
         medico: new Types.ObjectId(medico),
         diaSemana: diaNombre,
@@ -204,7 +205,6 @@ const getTurnosDisponibles = async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Buscar turnos ocupados
     const turnosOcupados = await Turno.find({
       medico: new Types.ObjectId(medico),
       fecha: { $gte: inicioDia, $lte: finDia },
@@ -266,7 +266,6 @@ const getDisponibilidadMes = async (req: Request, res: Response) => {
       const fechaObj = new Date(`${fechaStr}T00:00:00Z`);
       const diaNombre = DIAS_MAPA[fechaObj.getUTCDay()];
 
-      // 1. Revisar si hay excepciones para este día puntual
       const excepcionDia = await ExcepcionAgenda.findOne<IExcepcionAgenda>({
         medico,
         fecha: { $gte: inicioDia, $lte: finDia },
@@ -321,6 +320,7 @@ const getDisponibilidadMes = async (req: Request, res: Response) => {
     return respuestaEstandar(res, 500, false, 'Error al calcular la disponibilidad mensual', err.message);
   }
 };
+
 const createTurno = async (
   req: Request<unknown, unknown, ICreateTurnoDTO, IQueryUrgencia>,
   res: Response
@@ -328,7 +328,7 @@ const createTurno = async (
   try {
     const esUrgente = req.query.urgencia === 'true';
 
-    const { fecha, paciente } = req.body; // Asegúrate de que el body reciba el ID del paciente
+    const { fecha, paciente } = req.body; 
 
     const observaciones = (req.body.observaciones || '').trim();
 
@@ -339,26 +339,23 @@ const createTurno = async (
     const turnosCanceladosCount = await Turno.countDocuments({
       paciente,
       estado: EstadoTurno.CANCELADO,
-      activo: false // O según cómo manejes los cancelados en tu DB
+      activo: false 
     });
 
-    // Si tiene más de 3 cancelaciones, aplicamos la regla de bloqueo temporal
     if (turnosCanceladosCount > 3) {
-      // Opcional: Buscar el último turno cancelado para medir la fecha exacta de la sanción (ej: 15 días)
       const ultimoTurnoCancelado = await Turno.findOne({
         paciente,
         estado: EstadoTurno.CANCELADO
-      }).sort({ _id: -1 }); // O la fecha de modificación/cancelación
+      }).sort({ _id: -1 });
 
       if (ultimoTurnoCancelado) {
         const fechaCancelacion = new Date(ultimoTurnoCancelado._id.getTimestamp() || ultimoTurnoCancelado.fecha);
-        const diasPenalizacion = 15; // 15 días de suspensión (puedes cambiarlo a 7)
+        const diasPenalizacion = 15;
         const fechaFinSancion = new Date(fechaCancelacion);
         fechaFinSancion.setDate(fechaFinSancion.getDate() + diasPenalizacion);
 
         const hoy = new Date();
 
-        // Si la sanción sigue activa
         if (hoy < fechaFinSancion) {
           const diasRestantes = Math.ceil((fechaFinSancion.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
           return respuestaEstandar(
@@ -371,7 +368,6 @@ const createTurno = async (
       }
     }
 
-    //2. Resto de tus validaciones habituales (fechas pasadas, etc.)
     const fechaObjTurno = new Date(fecha as string | Date);
     
     if (isNaN(fechaObjTurno.getTime())) {
@@ -540,7 +536,6 @@ const marcarAtendido = async (req: Request<{ id: string }>, res: Response) => {
 const getTurnosPendientesHistoricos = async (req: Request, res: Response) => {
   try {
     const hoyStr = obtenerFechaHoyStr();
-    // Fin del día de hoy para incluir todo lo acumulado hasta el momento actual
     const finHoy = new Date(`${hoyStr}T23:59:59.999Z`);
 
     const pacientePopulate = {
@@ -562,7 +557,7 @@ const getTurnosPendientesHistoricos = async (req: Request, res: Response) => {
       .populate(pacientePopulate)
       .populate('medico', 'nombre apellido especialidad')
       .populate('especialidad', 'nombre')
-      .sort({ fecha: -1, hora: -1 }); // Los más recientes primero o como prefieras
+      .sort({ fecha: -1, hora: -1 });
 
     return respuestaEstandar(
       res, 
@@ -595,9 +590,8 @@ const cancelarTurno = async (req: Request<{ id: string }>, res: Response) => {
       return respuestaEstandar(res, 400, false, 'Este turno ya se encuentra cancelado.');
     }
 
-    // Actualizamos el estado a cancelado
     turno.estado = EstadoTurno.CANCELADO;
-    turno.activo = false; // Opcional según si quieres ocultarlo de listas activas
+    turno.activo = false; 
     await turno.save();
 
     return respuestaEstandar(res, 200, true, 'Turno cancelado exitosamente', turno);
@@ -608,15 +602,13 @@ const cancelarTurno = async (req: Request<{ id: string }>, res: Response) => {
   }
 };
 
-// Devuelve únicamente los turnos del paciente logueado.
-// Por defecto incluye los turnos futuros y los de los últimos 30 días.
-// Con ?historial=true devuelve todo el historial sin filtro de fecha.
 const getMisTurnos = async (
   req: Request<unknown, unknown, unknown, { historial?: string }>,
   res: Response
 ) => {
   try {
-    const usuario = (req as RequestAutenticado).usuario;
+    // CORRECCIÓN DEL CASTEO: Se pasa primero por unknown para evitar conflicto de tipos
+    const usuario = (req as unknown as RequestAutenticado).usuario;
 
     if (!usuario?.email) {
       return respuestaEstandar(res, 401, false, 'No autorizado');
@@ -648,10 +640,10 @@ const getMisTurnos = async (
   }
 };
 
-// Devuelve el detalle de un turno propio junto con la consulta médica asociada (si existe)
 const getMiTurnoById = async (req: Request<{ id: string }>, res: Response) => {
   try {
-    const usuario = (req as RequestAutenticado).usuario;
+    // CORRECCIÓN DEL CASTEO: Se pasa primero por unknown para evitar conflicto de tipos
+    const usuario = (req as unknown as RequestAutenticado).usuario;
 
     if (!usuario?.email) {
       return respuestaEstandar(res, 401, false, 'No autorizado');
@@ -687,7 +679,79 @@ const getMiTurnoById = async (req: Request<{ id: string }>, res: Response) => {
     return respuestaEstandar(res, 400, false, 'Error al obtener el turno', error.message);
   }
 };
+export const getTurnosAReprogramar = async (req: Request, res: Response) => {
+  try {
+    const hoy = new Date();
+    const fechaHoyStr = [
+      hoy.getFullYear(),
+      String(hoy.getMonth() + 1).padStart(2, '0'),
+      String(hoy.getDate()).padStart(2, '0'),
+    ].join('-');
+    const inicioHoy = new Date(`${fechaHoyStr}T00:00:00.000Z`);
 
+    // 1. Buscamos todas las excepciones activas desde hoy hacia adelante
+    const excepcionesActivas = await ExcepcionAgenda.find({
+      activo: true,
+      fecha: { $gte: inicioHoy },
+    });
+
+    if (excepcionesActivas.length === 0) {
+      return respuestaEstandar(res, 200, true, 'No hay excepciones activas con turnos afectados', []);
+    }
+
+    let turnosAfectados: any[] = [];
+
+    for (const exc of excepcionesActivas) {
+      const fechaExcStr = new Date(exc.fecha).toISOString().split('T')[0];
+      const inicioDia = new Date(`${fechaExcStr}T00:00:00.000Z`);
+      const finDia = new Date(`${fechaExcStr}T23:59:59.999Z`);
+
+      const turnosEnFecha = await Turno.find({
+        medico: exc.medico,
+        fecha: { $gte: inicioDia, $lte: finDia },
+        activo: true,
+        estado: { $in: [EstadoTurno.PENDIENTE, EstadoTurno.CONFIRMADO] },
+      })
+        .populate('paciente', 'nombre apellido telefono email dni')
+        .populate('medico', 'nombre apellido')
+        .populate('especialidad', 'nombre')
+        .sort({ hora: 1 });
+
+      // Si es modificación de horario, filtramos solo los que quedaron fuera del nuevo rango
+      const filtrados = turnosEnFecha.filter((turno) => {
+        if (exc.tipo === TipoExcepcion.BLOQUEO_TOTAL) return true;
+        if (exc.tipo === TipoExcepcion.MODIFICACION_HORARIO && exc.horaInicio && exc.horaFin) {
+          return turno.hora < exc.horaInicio || turno.hora >= exc.horaFin;
+        }
+        return false;
+      });
+
+      // Agregamos el motivo de la excepción a cada turno para contexto en el front
+      const conMotivo = filtrados.map((t) => ({
+        ...t.toJSON(),
+        motivoExcepcion: exc.motivo,
+      }));
+
+      turnosAfectados = turnosAfectados.concat(conMotivo);
+    }
+
+    return respuestaEstandar(
+      res,
+      200,
+      true,
+      'Turnos a reprogramar obtenidos exitosamente',
+      turnosAfectados
+    );
+  } catch (error: any) {
+    return respuestaEstandar(
+      res,
+      500,
+      false,
+      'Error al obtener los turnos a reprogramar',
+      error.message
+    );
+  }
+};
 
 export { 
   getTurnos, 
@@ -697,9 +761,9 @@ export {
   createTurno, 
   updateTurno, 
   deleteTurno, 
-  marcarAtendido ,
+  marcarAtendido,
   getTurnosPendientesHistoricos,
   cancelarTurno,
   getMisTurnos, 
-  getMiTurnoById 
+  getMiTurnoById,
 };
