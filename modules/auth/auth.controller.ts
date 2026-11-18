@@ -1,40 +1,58 @@
 // CONTROLLER DE AUTH
 // Hace: login (busca usuario activo, compara bcrypt, firma JWT 9h) y registro (hashea y crea).
-// Se conecta con: ./usuario.models, ../../utils/respuestaEstandar, bcrypt, jsonwebtoken.
+// Cambio de contraseña: valida la actual, guarda la nueva, sube tokenVersion y devuelve un token nuevo.
+// Se conecta con: ./usuario.models, ../../utils/respuestaEstandar, ../../config/env, bcrypt, jsonwebtoken.
 // Excepcion: el login NO usa respuestaEstandar, devuelve { ok, token } (lo espera el frontend).
 import type { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 import { Usuario } from './usuario.models';
 import { respuestaEstandar } from '../../utils/respuestaEstandar';
-import { ICambiarPasswordDTO } from './dtos/auth.schemas';
+import type { ICambiarPasswordDTO } from './dtos/auth.schemas';
+import { JWT_SECRET } from '../../config/env';
+import type { RequestAutenticado } from '../../middlewares/autenticar.middleware';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'claveSecretaDesarrollo';
+const BCRYPT_ROUNDS = 12;
+// 9 horas = jornada laboral. Si hace falta revocar antes, se usa tokenVersion o activo:false.
+const JWT_EXPIRES_IN = '9h';
+
+const firmarToken = (usuario: any): string =>
+    jwt.sign(
+        {
+            id: usuario.id,
+            email: usuario.email,
+            user: usuario.user,
+            rol: usuario.rol,
+            tokenVersion: usuario.tokenVersion ?? 0,
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, password } = req.body;
 
-        const usuario = await Usuario.findOne({ email, activo: true });
+        const usuario = await Usuario.findOne({
+            email: String(email).toLowerCase().trim(),
+            activo: true,
+        });
+
         if (!usuario) {
-            return respuestaEstandar(res, 401, false, 'credencial invalida');
+            return respuestaEstandar(res, 401, false, 'Credenciales inválidas');
         }
 
         const passwordOk = await bcrypt.compare(password, usuario.password);
         if (!passwordOk) {
-            return respuestaEstandar(res, 401, false, 'credencial invalida');
+            return respuestaEstandar(res, 401, false, 'Credenciales inválidas');
         }
 
-        const token = jwt.sign(
-            { id: usuario.id, email: usuario.email, user: usuario.user, rol: usuario.rol },
-            JWT_SECRET,
-            { expiresIn: '9h' }
-        );
+        const token = firmarToken(usuario);
 
-        return res.status(200).json({ 
-            ok: true, 
-            token, 
-            debeCambiarPassword: usuario.debeCambiarPassword 
+        return res.status(200).json({
+            ok: true,
+            token,
+            debeCambiarPassword: usuario.debeCambiarPassword ?? false,
         });
     } catch (error) {
         next(error);
@@ -50,7 +68,7 @@ export const registro = async (req: Request, res: Response, next: NextFunction) 
             return respuestaEstandar(res, 400, false, 'email o usuario ya registrado');
         }
 
-        const hash = await bcrypt.hash(password, 10);
+        const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
         const usuario = await Usuario.create({ email, user, password: hash, rol });
 
         return respuestaEstandar(res, 201, true, 'usuario registrado', {
@@ -65,26 +83,20 @@ export const registro = async (req: Request, res: Response, next: NextFunction) 
         next(error);
     }
 };
-export const cambiarPasswordPrimerLogin = async (req: Request<{ id: string }, unknown, ICambiarPasswordDTO>, res: Response) => {
-    try {
 
-        const reqAuth = req as Request & { usuario?: { id: string }; headers?: { authorization?: string } };
-        let usuarioId = reqAuth.usuario?.id;
-        if (!usuarioId) {
-            const authHeader = req.headers.authorization || "";
-            const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-            if (token) {
-                try {
-                    const payload = jwt.verify(token, JWT_SECRET) as { id?: string };
-                    usuarioId = payload.id;
-                } catch {
-                    return respuestaEstandar(res, 401, false, 'Token invalido o expirado');
-                }
-            }
-        }
+export const cambiarPasswordPrimerLogin = async (
+    req: Request<unknown, unknown, ICambiarPasswordDTO>,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        // El id sale SIEMPRE del token (autenticar), nunca del body.
+        const usuarioId = (req as RequestAutenticado).usuario?.id;
+
         if (!usuarioId) {
             return respuestaEstandar(res, 401, false, 'No autorizado');
         }
+
         const { passwordActual, nuevaPassword } = req.body;
 
         const usuario = await Usuario.findById(usuarioId);
@@ -92,22 +104,24 @@ export const cambiarPasswordPrimerLogin = async (req: Request<{ id: string }, un
             return respuestaEstandar(res, 404, false, 'Usuario no encontrado');
         }
 
-        // Verificar que la contraseña actual sea correcta
         const passwordOk = await bcrypt.compare(passwordActual, usuario.password);
         if (!passwordOk) {
             return respuestaEstandar(res, 400, false, 'La contraseña actual es incorrecta');
         }
 
-        // Hashear la nueva contraseña
-        const hashedPassword = await bcrypt.hash(nuevaPassword, 10);
+        if (passwordActual === nuevaPassword) {
+            return respuestaEstandar(res, 400, false, 'La nueva contraseña debe ser distinta a la actual');
+        }
 
-        // Actualizar la contraseña y cambiar la bandera a false
-        usuario.password = hashedPassword;
+        usuario.password = await bcrypt.hash(nuevaPassword, BCRYPT_ROUNDS);
         usuario.debeCambiarPassword = false;
+        usuario.tokenVersion = (usuario.tokenVersion ?? 0) + 1;
         await usuario.save();
 
-        return respuestaEstandar(res, 200, true, 'Contraseña actualizada exitosamente');
-    } catch (error: any) {
-        return respuestaEstandar(res, 500, false, 'Error al cambiar la contraseña', error.message);
+        const token = firmarToken(usuario);
+
+        return respuestaEstandar(res, 200, true, 'Contraseña actualizada exitosamente', { token });
+    } catch (error) {
+        next(error);
     }
 };

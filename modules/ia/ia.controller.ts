@@ -3,21 +3,45 @@ import axios from "axios";
 import { respuestaEstandar } from "../../utils/respuestaEstandar";
 import PacienteModel from "../paciente/paciente.models"; 
 import HistorialMedico from "../historialMedico/historialMedico.models";
+import { obtenerMedicoId, pacientePerteneceAlMedico } from "../../utils/medicoScope";
+
+// El historial guarda arrays de subdocumentos { descripcion, fechaDeCreacion }.
+// Se toleran tambien strings por compatibilidad con datos viejos.
+const listarDescripciones = (items: unknown): string => {
+    if (!Array.isArray(items) || items.length === 0) return "Ninguna";
+
+    const descripciones = items
+        .map((item: any) => (typeof item === "string" ? item : item?.descripcion || ""))
+        .map((descripcion: string) => descripcion.trim())
+        .filter(Boolean);
+
+    return descripciones.length ? descripciones.join(", ") : "Ninguna";
+};
 
 export const sugerirAsistencia = async (req: Request, res: Response) => {
     try {
         const { pacienteId, motivo, sintomas } = req.body;
 
-        const paciente = await PacienteModel.findById(pacienteId).select("nombre apellido dni sexo fechaNacimiento email");
+        if (!pacienteId) {
+            return respuestaEstandar(res, 400, false, "El paciente es obligatorio");
+        }
+
+        const medicoId = obtenerMedicoId(req);
+
+        if (medicoId && !(await pacientePerteneceAlMedico(medicoId, String(pacienteId)))) {
+            return respuestaEstandar(res, 403, false, "No tenés acceso a este paciente");
+        }
+
+        const paciente = await PacienteModel.findById(pacienteId).select("nombre apellido dni sexo email");
         if (!paciente) {
             return respuestaEstandar(res, 404, false, "Paciente no encontrado");
         }
 
         const historial = await HistorialMedico.findOne({ paciente: pacienteId, activo: true });
 
-        const alergias = historial?.alergias?.length ? historial.alergias.join(", ") : "Ninguna";
-        const enfermedadesCronicas = historial?.enfermedadesCronicas?.length ? historial.enfermedadesCronicas.join(", ") : "Ninguna";
-        const medicacionActual = historial?.medicacionActual?.length ? historial.medicacionActual.join(", ") : "Ninguna";
+        const alergias = listarDescripciones(historial?.alergias);
+        const enfermedadesCronicas = listarDescripciones(historial?.enfermedadesCronicas);
+        const medicacionActual = listarDescripciones(historial?.medicacionActual);
         const antecedentesFamiliares = historial?.antecedentesFamiliares || "Sin antecedentes";
         const antecedentesQuirurgicos = historial?.antecedentesQuirurgicos || "Sin antecedentes";
 

@@ -11,15 +11,12 @@ import { autenticar, permitirRoles } from '../../middlewares/autenticar.middlewa
 
 const router = Router();
 
-router.post(
-  '/',
-  autenticar,
-  permitirRoles('ADMIN', 'RECEPCIONISTA', 'MEDICO'),
-  validarSchema(excepcionAgendaZodSchema),
-  crearExcepcionAgenda
-);
-router.get('/', getExcepcionesAgenda);
+// Las excepciones modifican la agenda de un medico: solo personal autorizado.
+const personalAgenda = ['ADMIN', 'RECEPCIONISTA', 'MEDICO'] as const;
+
+router.post('/', autenticar, permitirRoles(...personalAgenda), validarSchema(excepcionAgendaZodSchema), crearExcepcionAgenda);
+router.get('/', autenticar, permitirRoles(...personalAgenda), getExcepcionesAgenda);
 router.get('/reprogramar', getTurnosAReprogramar);
-router.patch('/:id/desactivar', desactivarExcepcionAgenda);
+router.patch('/:id/desactivar', autenticar, permitirRoles(...personalAgenda), desactivarExcepcionAgenda);
 
 export default router;

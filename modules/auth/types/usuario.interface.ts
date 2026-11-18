@@ -11,4 +11,5 @@ export interface IUsuario extends Document {
     rol: Rol;
     activo: boolean;
     debeCambiarPassword?: boolean;
+    tokenVersion?: number;
 }
